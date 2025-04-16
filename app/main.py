@@ -283,7 +283,6 @@ if youtube_link:
                         range(len(language_options)),
                         format_func=lambda i: language_options[i],
                     )
-
                     selected_language_code = all_transcripts[selected_index]["code"]
 
                     # 번역 옵션 표시
