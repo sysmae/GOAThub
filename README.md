@@ -3,6 +3,7 @@
 2025 CAU OSSW 프로젝트
 
 실행 명령어 : streamlit run app/main.py
+린트 : ruff check app/ --fix
 
 1. **프로젝트 개요**
    - 프로젝트 제목: 딸깍튜브(가제)
