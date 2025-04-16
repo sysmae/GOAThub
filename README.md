@@ -2,6 +2,9 @@
 
 2025 CAU OSSW 프로젝트
 
+실행 명령어 : streamlit run app/main.py
+린트 : ruff check app/ --fix
+
 1. **프로젝트 개요**
    - 프로젝트 제목: 딸깍튜브(가제)
    - 팀명: GOATHub
@@ -54,6 +57,3 @@
    - SerpAPI 등 통해서 유사한 영상과 관련 자료 링크 가져오기
    - 대본 기반 블로그 포스팅 작성
    - 대본 기반 퀴즈 생성(푸는 기능X)
-   - tts
-
-streamlit run app.py로 실행
