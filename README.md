@@ -2,7 +2,7 @@
 
 2025 CAU OSSW 프로젝트
 
-streamlit run app/main.py
+실행 명령어 : streamlit run app/main.py
 
 1. **프로젝트 개요**
    - 프로젝트 제목: 딸깍튜브(가제)
