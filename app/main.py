@@ -130,7 +130,7 @@ def extract_transcript_details(youtube_video_url, selected_language_code=None):
             try:
                 transcript = transcript_list.find_transcript([selected_language_code])
                 transcript_data = transcript.fetch()
-            except:
+            except Exception:
                 # 선택된 언어로 자막을 찾을 수 없는 경우, 번역 시도
                 try:
                     first_transcript = next(iter(transcript_list))
@@ -142,7 +142,7 @@ def extract_transcript_details(youtube_video_url, selected_language_code=None):
                             None,
                             f"선택한 언어({selected_language_code})로 자막을 찾을 수 없으며, 번역도 불가능합니다.",
                         )
-                except:
+                except StopIteration:
                     return None, f"선택한 언어({selected_language_code})로 자막을 찾을 수 없습니다."
         else:
             # 기본 언어 설정 (한국어 우선, 없으면 영어, 둘 다 없으면 첫 번째 사용 가능한 언어)
