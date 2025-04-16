@@ -1,0 +1,18 @@
+name: Branch Naming Policy
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  branch-naming-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce branch naming
+        uses: deepakputhraya/action-branch-name@master
+        with:
+          regex: '^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$'
+          min_length: 8
+          max_length: 50
+          ignore: main,develop
