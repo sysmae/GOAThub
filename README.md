@@ -76,8 +76,16 @@ git push origin feature/기능명
    GitHub에서 `main` 대상 PR 생성 후, 리뷰 및 승인받기  
    (자동 린트 검사, 테스트 통과 필수)
 
-6. **실행 명렁어 **
+---
+
+## 실행법
+
+1. **실행 명렁어**
    streamlit run src/app.py
+
+2. **도커 활용**
+   docker build -t goathub-app .
+   docker run -p 8501:8501 --env-file .env goathub-app
 
 ---
 
