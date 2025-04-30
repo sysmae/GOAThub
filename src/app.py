@@ -127,23 +127,86 @@ def summarize_text(text):
     return summary
 
 
-# 세션 상태 초기화
-if "transcript_text" not in st.session_state:
-    st.session_state.transcript_text = ""
-if "transcript_data" not in st.session_state:
-    st.session_state.transcript_data = None
-if "summary" not in st.session_state:
-    st.session_state.summary = ""
-if "video_id" not in st.session_state:
-    st.session_state.video_id = ""
+# === 세션 상태 초기화 함수 ===
+def init_session():
+    default_values = {
+        "video_id": "",
+        "transcript_text": "",
+        "transcript_data": None,
+        "summary": "",
+        "summarize_clicked": False,
+        "summarizing": False,
+        "summarized": False,
+    }
+    for k, v in default_values.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-# 버튼 클릭 상태 초기화
-if "summarize_clicked" not in st.session_state:
-    st.session_state.summarize_clicked = False
 
+init_session()
+
+
+# === 영상 로딩 및 대본 추출 ===
+def load_video(url):
+    vid = extract_video_id(url)
+    if not vid:
+        st.error("유효하지 않은 유튜브 링크입니다.")
+        return
+
+    # 영상 ID가 바뀐 경우에만 업데이트
+    if st.session_state.video_id != vid:
+        txt, data = get_transcript_kome(vid)
+        if data:
+            st.session_state.update(
+                {
+                    "video_id": vid,
+                    "transcript_text": txt,
+                    "transcript_data": data,
+                    "summary": "",
+                    "summarize_clicked": False,
+                    "summarizing": False,
+                    "summarized": False,
+                }
+            )
+        else:
+            st.error("대본 추출 실패")
+
+
+# === 요약 실행 ===
+def run_summary():
+    with st.spinner("요약 생성 중…"):
+        st.session_state.summary = summarize_text(st.session_state.transcript_text)
+        st.session_state.summarize_clicked = True
+
+
+# === 요약 렌더링 ===
+def render_summary():
+    import re
+
+    summary = st.session_state.summary
+
+    if not summary:
+        return
+
+    with st.expander("🔍 요약 결과 보기", expanded=True):
+        mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
+        for code in mermaid_blocks:
+            stmd.st_mermaid(code.strip())
+
+        cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
+        st_markdown(cleaned, extensions=["tables", "fenced_code", "codehilite"])
+
+    st.download_button(
+        "요약 노트 다운로드",
+        summary.encode(),
+        f"summary_{st.session_state.video_id}.md",
+        "text/markdown",
+    )
+
+
+# === 메인 앱 ===
 st.set_page_config(layout="wide", page_title="유튜브 대본 요약 서비스")
 st.title("유튜브 대본 요약 서비스")
-st.markdown("유튜브 영상의 대본을 kome.ai API로 추출하고 LangChain으로 마크다운 요약을 제공합니다.")
 
 with st.sidebar:
     st.header("설정")
@@ -153,79 +216,23 @@ with st.sidebar:
     st.write("2. 대본을 추출합니다")
     st.write("3. 요약 버튼을 클릭하세요")
 
-
-# 세션 상태 초기화
-for key in ("transcript_text", "transcript_data", "summary", "video_id"):
-    if key not in st.session_state:
-        st.session_state[key] = ""
-if "summarize_clicked" not in st.session_state:
-    st.session_state.summarize_clicked = False
-
-
 yt_url = st.text_input("유튜브 링크 입력", placeholder="https://www.youtube.com/watch?v=...")
 if yt_url:
-    vid = extract_video_id(yt_url)
-    if vid:
-        txt, data = get_transcript_kome(vid)
-        if data:
-            st.session_state.update(
-                {
-                    "video_id": vid,
-                    "transcript_text": txt,
-                    "transcript_data": data,
-                    "summary": "",
-                    "summarizing": False,
-                    "summarized": False,
-                }
-            )
-        else:
-            st.error("대본 추출 실패")
-    else:
-        st.error("유효하지 않은 유튜브 링크입니다")
+    load_video(yt_url)
 
-# 요약 및 원본 대본 렌더링
+# === 요약 및 대본 표시 ===
 if st.session_state.transcript_data:
     col1, col2 = st.columns([2, 1])
 
-    # 왼쪽: 요약 노트 영역
     with col1:
-        # 버튼을 빈 컨테이너에 담기
         btn_placeholder = st.empty()
         if not st.session_state.summarize_clicked:
             if btn_placeholder.button("대본 요약하기"):
-                # 클릭 즉시 컨테이너 비우기 → 버튼 숨김
                 btn_placeholder.empty()
-                st.session_state.summarize_clicked = True
-                with st.spinner("요약 생성 중…"):
-                    st.session_state.summary = summarize_text(st.session_state.transcript_text)
+                run_summary()
 
-        # 요약 결과를 expander로 감싸 스크롤 가능하게
-        if st.session_state.summary:
-            with st.expander("🔍 요약 결과 보기", expanded=True):
-                # Mermaid 전용 렌더링
-                import re
+        render_summary()
 
-                # Mermaid 블록 추출: ```mermaid ... ```
-                mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", st.session_state.summary)
-
-                for code in mermaid_blocks:
-                    stmd.st_mermaid(code.strip())  # 공백 제거 후 렌더링
-
-                # Mermaid 블록 제거 후 일반 Markdown 렌더링
-                cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", st.session_state.summary)
-                st_markdown(cleaned, extensions=["tables", "fenced_code", "codehilite"])
-
-                # Markdown 렌더링
-                # st.markdown(st.session_state.summary, unsafe_allow_html=True)
-
-            st.download_button(
-                "요약 노트 다운로드",
-                st.session_state.summary.encode(),
-                f"summary_{st.session_state.video_id}.md",
-                "text/markdown",
-            )
-
-    # 오른쪽: 영상 플레이어 + 원본 대본
     with col2:
         st.video(f"https://youtu.be/{st.session_state.video_id}", start_time=0)
         st.subheader("원본 대본")
