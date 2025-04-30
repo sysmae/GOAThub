@@ -1,3 +1,4 @@
+import base64
 import os
 import re
 
@@ -10,7 +11,6 @@ from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
-from streamlit_markdown import st_markdown
 
 load_dotenv()  # .env 파일에서 환경변수 로드
 
@@ -179,7 +179,38 @@ def run_summary():
         st.session_state.summarize_clicked = True
 
 
+def render_mermaid_html(code: str) -> str:
+    # Mermaid 코드 HTML 문서 생성
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({{ startOnLoad: true }});
+  </script>
+</head>
+<body>
+  <div class="mermaid">
+  {code}
+  </div>
+</body>
+</html>
+"""
+    # HTML을 base64로 인코딩
+    encoded = base64.b64encode(html.encode("utf-8")).decode("utf-8")
+    iframe_html = f"""
+<iframe src="data:text/html;base64,{encoded}"
+        width="100%" height="400" frameborder="0">
+</iframe>
+"""
+    return iframe_html
+
+
 # === 요약 렌더링 ===
+
+
 def render_summary():
     import re
 
@@ -189,12 +220,15 @@ def render_summary():
         return
 
     with st.expander("🔍 요약 결과 보기", expanded=True):
+        # 1. Mermaid 코드 블록 추출
         mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
         for code in mermaid_blocks:
-            stmd.st_mermaid(code.strip())
+            html = render_mermaid_html(code.strip())
+            st.components.v1.html(html, height=450, scrolling=True)
 
+        # 2. Mermaid 코드 제거하고 나머지 마크다운 렌더링
         cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
-        st_markdown(cleaned, extensions=["tables", "fenced_code", "codehilite"])
+        st.markdown(cleaned)
 
     st.download_button(
         "요약 노트 다운로드",
@@ -202,6 +236,35 @@ def render_summary():
         f"summary_{st.session_state.video_id}.md",
         "text/markdown",
     )
+
+
+# def render_summary():
+#     import re
+
+#     summary = st.session_state.summary
+
+#     if not summary:
+#         return
+
+#     with st.expander("🔍 요약 결과 보기", expanded=True):
+#         # 1. Mermaid 코드 블록 추출 및 렌더링
+#         mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
+#         for code in mermaid_blocks:
+#             stmd.st_mermaid(code.strip())
+
+#         # 2. Mermaid 블록 제거 후 나머지 Markdown 렌더링
+#         cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
+
+#         # 기본 마크다운 렌더링 (streamlit_markdown 제거)
+#         st.markdown(cleaned, unsafe_allow_html=True)
+
+#     # 3. 다운로드 버튼
+#     st.download_button(
+#         "요약 노트 다운로드",
+#         summary.encode(),
+#         f"summary_{st.session_state.video_id}.md",
+#         "text/markdown",
+#     )
 
 
 # === 메인 앱 ===
