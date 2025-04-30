@@ -179,63 +179,36 @@ def run_summary():
         st.session_state.summarize_clicked = True
 
 
-def render_mermaid_html(code: str) -> str:
-    # Mermaid 코드 HTML 문서 생성
-    html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({{ startOnLoad: true }});
-  </script>
-</head>
-<body>
-  <div class="mermaid">
-  {code}
-  </div>
-</body>
-</html>
-"""
-    # HTML을 base64로 인코딩
-    encoded = base64.b64encode(html.encode("utf-8")).decode("utf-8")
-    iframe_html = f"""
-<iframe src="data:text/html;base64,{encoded}"
-        width="100%" height="400" frameborder="0">
-</iframe>
-"""
-    return iframe_html
+# def render_mermaid_html(code: str) -> str:
+#     # Mermaid 코드 HTML 문서 생성
+#     html = f"""
+# <!DOCTYPE html>
+# <html>
+# <head>
+#   <meta charset="utf-8">
+#   <script type="module">
+#     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+#     mermaid.initialize({{ startOnLoad: true }});
+#   </script>
+# </head>
+# <body>
+#   <div class="mermaid">
+#   {code}
+#   </div>
+# </body>
+# </html>
+# """
+#     # HTML을 base64로 인코딩
+#     encoded = base64.b64encode(html.encode("utf-8")).decode("utf-8")
+#     iframe_html = f"""
+# <iframe src="data:text/html;base64,{encoded}"
+#         width="100%" height="400" frameborder="0">
+# </iframe>
+# """
+#     return iframe_html
 
 
 # === 요약 렌더링 ===
-
-
-def render_summary():
-    import re
-
-    summary = st.session_state.summary
-
-    if not summary:
-        return
-
-    with st.expander("🔍 요약 결과 보기", expanded=True):
-        # 1. Mermaid 코드 블록 추출
-        mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
-        for code in mermaid_blocks:
-            html = render_mermaid_html(code.strip())
-            st.components.v1.html(html, height=450, scrolling=True)
-
-        # 2. Mermaid 코드 제거하고 나머지 마크다운 렌더링
-        cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
-        st.markdown(cleaned)
-
-    st.download_button(
-        "요약 노트 다운로드",
-        summary.encode(),
-        f"summary_{st.session_state.video_id}.md",
-        "text/markdown",
-    )
 
 
 # def render_summary():
@@ -247,18 +220,16 @@ def render_summary():
 #         return
 
 #     with st.expander("🔍 요약 결과 보기", expanded=True):
-#         # 1. Mermaid 코드 블록 추출 및 렌더링
+#         # 1. Mermaid 코드 블록 추출
 #         mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
 #         for code in mermaid_blocks:
-#             stmd.st_mermaid(code.strip())
+#             html = render_mermaid_html(code.strip())
+#             st.components.v1.html(html, height=450, scrolling=True)
 
-#         # 2. Mermaid 블록 제거 후 나머지 Markdown 렌더링
+#         # 2. Mermaid 코드 제거하고 나머지 마크다운 렌더링
 #         cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
+#         st.markdown(cleaned)
 
-#         # 기본 마크다운 렌더링 (streamlit_markdown 제거)
-#         st.markdown(cleaned, unsafe_allow_html=True)
-
-#     # 3. 다운로드 버튼
 #     st.download_button(
 #         "요약 노트 다운로드",
 #         summary.encode(),
@@ -267,17 +238,46 @@ def render_summary():
 #     )
 
 
+def render_summary():
+    import re
+
+    summary = st.session_state.summary
+
+    if not summary:
+        return
+
+    with st.expander("🔍 요약 결과 보기", expanded=True):
+        # 1. Mermaid 코드 블록 추출 및 렌더링
+        mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
+        for code in mermaid_blocks:
+            stmd.st_mermaid(code.strip())
+
+        # 2. Mermaid 블록 제거 후 나머지 Markdown 렌더링
+        cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
+
+        # 기본 마크다운 렌더링 (streamlit_markdown 제거)
+        st.markdown(cleaned, unsafe_allow_html=True)
+
+    # 3. 다운로드 버튼
+    st.download_button(
+        "요약 노트 다운로드",
+        summary.encode(),
+        f"summary_{st.session_state.video_id}.md",
+        "text/markdown",
+    )
+
+
 # === 메인 앱 ===
 st.set_page_config(layout="wide", page_title="유튜브 대본 요약 서비스")
 st.title("유튜브 대본 요약 서비스")
 
-with st.sidebar:
-    st.header("설정")
-    st.markdown("---")
-    st.markdown("### 사용 방법")
-    st.write("1. 유튜브 링크를 입력하세요")
-    st.write("2. 대본을 추출합니다")
-    st.write("3. 요약 버튼을 클릭하세요")
+# with st.sidebar:
+#     st.header("설정")
+#     st.markdown("---")
+#     st.markdown("### 사용 방법")
+#     st.write("1. 유튜브 링크를 입력하세요")
+#     st.write("2. 대본을 추출합니다")
+#     st.write("3. 요약 버튼을 클릭하세요")
 
 yt_url = st.text_input("유튜브 링크 입력", placeholder="https://www.youtube.com/watch?v=...")
 if yt_url:
