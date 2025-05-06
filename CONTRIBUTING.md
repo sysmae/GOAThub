@@ -20,6 +20,20 @@ git clone https://github.com/sysmae/GOAThub.git
 cd GOAThub
 ```
 
+### 3. 필수 패키지 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. 환경 변수 설정
+
+`.env` 파일을 프로젝트 루트 디렉토리에 만들고 다음 항목을 입력하세요:
+
+```env
+GOOGLE_API_KEY=your-google-api-key
+```
+
 ---
 
 ## 코드 스타일 및 린팅
