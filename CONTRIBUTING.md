@@ -106,6 +106,11 @@ git checkout -b feature/new-feature
 ### 3. 커밋 규칙
 
 - **구조**: `: `
+  - `feat: `새로운 기능 추가
+  - `fix: `버그 수정
+  - `docs: `문서 변경
+  - `refactor: `코드 리팩터링
+  - `test: `테스트 코드 추가/설정
 - **예시**:
   ```
   feat: YouTube 요약 기능 추가
@@ -214,7 +219,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Ruff
         run: pip install ruff
@@ -240,7 +245,7 @@ jobs:
       - name: Enforce branch naming
         uses: deepakputhraya/action-branch-name@master
         with:
-          regex: '^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$'
+          regex: "^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$"
           min_length: 8
           max_length: 50
           ignore: main,develop
