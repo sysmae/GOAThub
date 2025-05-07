@@ -12,12 +12,27 @@ from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
+from notion_client import Client
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
 load_dotenv()  # .env 파일에서 환경변수 로드
 
+def set_env_variable(key, value, env_path=".env"):
+    """
+    .env 파일의 환경변수를 key=value 형태로 저장합니다. 기존 값은 덮어씌워집니다.
+    """
+    from dotenv import dotenv_values
 
+    current = dotenv_values(env_path)
+    current[key] = value
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        for k, v in current.items():
+            f.write(f"{k}={v}\n")
+
+    # 반영을 위해 다시 로드
+    load_dotenv(dotenv_path=env_path, override=True)
 # 유튜브 비디오 ID 추출 함수
 def extract_video_id(url):
     patterns = [
@@ -29,30 +44,6 @@ def extract_video_id(url):
         if match:
             return match.group(1)
     return None
-
-
-# # kome.ai API로 대본 추출
-# def get_transcript(video_id):
-#     url = "https://api.kome.ai/api/tools/youtube-transcripts"
-#     payload = {"video_id": video_id, "format": True}
-#     try:
-#         response = requests.post(url, json=payload, timeout=30)
-#         response.raise_for_status()
-#         data = response.json()
-#         # transcript가 리스트면 각 segment의 text 합치기
-#         if "transcript" in data:
-#             transcript = data["transcript"]
-#             if isinstance(transcript, list):
-#                 full_text = " ".join([seg.get("text", "") for seg in transcript])
-#             else:
-#                 full_text = str(transcript)
-#             return full_text, transcript
-#         elif "text" in data:
-#             return data["text"], data
-#         else:
-#             return f"대본 데이터 구조를 알 수 없습니다: {data}", None
-#     except Exception as e:
-#         return f"오류 발생: {str(e)}", None
 
 
 def get_transcript(
@@ -239,18 +230,18 @@ def render_summary():
         return
 
     with st.expander("🔍 요약 결과 보기", expanded=True):
-        # 1. Mermaid 코드 블록 추출 및 렌더링
+        # 1. Mermaid 코드 블록 추출 및 렌더링 (시각화만)
         mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
         for code in mermaid_blocks:
             stmd.st_mermaid(code.strip())
 
-        # 2. Mermaid 블록 제거 후 나머지 Markdown 렌더링
+        # 2. Mermaid 블록 자체는 마크다운 출력에서 제거
         cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
 
-        # 기본 마크다운 렌더링 (streamlit_markdown 제거)
+        # 3. 나머지 요약 마크다운 출력
         st.markdown(cleaned, unsafe_allow_html=True)
 
-    # 3. 다운로드 버튼
+    # 4. 다운로드 버튼
     st.download_button(
         "요약 노트 다운로드",
         summary.encode(),
@@ -259,21 +250,192 @@ def render_summary():
     )
 
 
+
+
+def markdown_to_notion_blocks(markdown: str):
+    """
+    Markdown 텍스트를 Notion 블록으로 변환합니다.
+    - 굵은 글씨, 기울임 적용
+    - Mermaid 블록은 Notion에 저장하지 않음
+    """
+    blocks = []
+    lines = markdown.splitlines()
+
+    in_mermaid = False
+    in_code_block = False
+    code_lang = ""
+    code_lines = []
+
+    def convert_text_to_rich(text):
+        """굵은 글씨와 기울임을 Notion rich_text 형식으로 변환"""
+        segments = []
+        while text:
+            bold = re.search(r'\*\*(.*?)\*\*', text)
+            italic = re.search(r'_(.*?)_', text)
+            if bold and (not italic or bold.start() < italic.start()):
+                before = text[:bold.start()]
+                if before:
+                    segments.append({"type": "text", "text": {"content": before}})
+                segments.append({
+                    "type": "text",
+                    "text": {"content": bold.group(1)},
+                    "annotations": {"bold": True}
+                })
+                text = text[bold.end():]
+            elif italic:
+                before = text[:italic.start()]
+                if before:
+                    segments.append({"type": "text", "text": {"content": before}})
+                segments.append({
+                    "type": "text",
+                    "text": {"content": italic.group(1)},
+                    "annotations": {"italic": True}
+                })
+                text = text[italic.end():]
+            else:
+                segments.append({"type": "text", "text": {"content": text}})
+                break
+        return segments
+
+    for line in lines:
+        line = line.strip()
+
+        if line.startswith("```mermaid"):
+            in_mermaid = True
+            continue
+        elif line.startswith("```") and in_mermaid:
+            in_mermaid = False
+            continue
+        elif in_mermaid:
+            continue  # 노션에는 mermaid를 저장하지 않음
+
+        if line.startswith("```"):
+            if not in_code_block:
+                in_code_block = True
+                code_lang = line[3:].strip()
+                code_lines = []
+            else:
+                # 종료 시점
+                blocks.append({
+                    "object": "block",
+                    "type": "code",
+                    "code": {
+                        "language": code_lang or "plain text",
+                        "rich_text": [{
+                            "type": "text",
+                            "text": {"content": "\n".join(code_lines)}
+                        }]
+                    }
+                })
+                in_code_block = False
+        elif in_code_block:
+            code_lines.append(line)
+        elif line.startswith("# "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_1",
+                "heading_1": {
+                    "rich_text": convert_text_to_rich(line[2:])
+                }
+            })
+        elif line.startswith("## "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {
+                    "rich_text": convert_text_to_rich(line[3:])
+                }
+            })
+        elif line.startswith("### "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_3",
+                "heading_3": {
+                    "rich_text": convert_text_to_rich(line[4:])
+                }
+            })
+        elif line.startswith("- "):
+            blocks.append({
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": convert_text_to_rich(line[2:])
+                }
+            })
+        elif line:
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": convert_text_to_rich(line)
+                }
+            })
+
+    return blocks
+
+
+
+def save_to_notion_as_page(summary: str):
+    """
+    Save the summary as a new page in Notion with proper formatting.
+    """
+    notion_token = os.getenv("NOTION_API_TOKEN")
+    parent_page_id = os.getenv("NOTION_PAGE_ID")
+
+    if not notion_token:
+        st.error("Notion API token is not set.")
+        return
+
+    notion = Client(auth=notion_token)
+
+    try:
+        # Split the summary into title and content
+        lines = summary.strip().split("\n", 1)
+        title = lines[0][2:] if lines and lines[0].startswith("# ") else lines[0]  # Remove leading '# '
+        content = lines[1] if len(lines) > 1 else ""
+
+        # Convert content to Notion blocks
+        blocks = markdown_to_notion_blocks(content)
+
+        # Create a new page in Notion
+        notion.pages.create(
+            parent={"type": "page_id", "page_id": parent_page_id},
+            properties={
+                "title": [
+                    {
+                        "type": "text",
+                        "text": {"content": title},
+                    }
+                ]
+            },
+            children=blocks,
+        )
+        st.success("Summary has been saved as a new page in Notion!")
+    except Exception as e:
+        st.error(f"Error saving to Notion: {e}")
+
+
+
 # === 메인 앱 ===
 st.set_page_config(layout="wide", page_title="유튜브 대본 요약 서비스")
 st.title("유튜브 대본 요약 서비스")
 
-# with st.sidebar:
-#     st.header("설정")
-#     st.markdown("---")
-#     st.markdown("### 사용 방법")
-#     st.write("1. 유튜브 링크를 입력하세요")
-#     st.write("2. 대본을 추출합니다")
-#     st.write("3. 요약 버튼을 클릭하세요")
-
 yt_url = st.text_input("유튜브 링크 입력", placeholder="https://www.youtube.com/watch?v=...")
 if yt_url:
     load_video(yt_url)
+
+# === Notion 설정 입력 ===
+with st.expander("⚙️ Notion 설정 입력", expanded=False):
+    user_token = st.text_input("🔑 Notion API Token", type="password", placeholder="secret_...")
+    user_page_id = st.text_input("📄 Notion Page ID", placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+
+    if st.button("✅ OK - 설정 저장"):
+        if user_token and user_page_id:
+            set_env_variable("NOTION_API_TOKEN", user_token)
+            set_env_variable("NOTION_PAGE_ID", user_page_id)
+            st.success("✅ 환경변수 저장 완료! Notion 저장 기능에 바로 적용됩니다.")
+        else:
+            st.warning("⚠️ 모든 필드를 입력해야 합니다.")
 
 # === 요약 및 대본 표시 ===
 if st.session_state.transcript_data:
@@ -288,8 +450,11 @@ if st.session_state.transcript_data:
 
         render_summary()
 
+        if st.session_state.get("summary"):
+            if st.button("Save to Notion as Page"):
+                save_to_notion_as_page(st.session_state["summary"])
+
     with col2:
-        # st.video(f"https://youtu.be/{st.session_state.video_id}", start_time=0)
         st.subheader("원본 대본")
         st.text_area("", st.session_state.transcript_text, height=300)
         if isinstance(st.session_state.transcript_data, list):
@@ -299,3 +464,4 @@ if st.session_state.transcript_data:
                     m, s = divmod(int(e.get("start", 0)), 60)
                     rows.append({"시간": f"{m:02d}:{s:02d}", "텍스트": e.get("text", "")})
                 st.dataframe(rows, height=200)
+
