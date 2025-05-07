@@ -1,7 +1,7 @@
 import base64
 import os
 import re
-from typing import List, Dict, Union
+from typing import Dict, List, Union
 
 import requests
 import streamlit as st
@@ -12,7 +12,6 @@ from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
-
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
@@ -58,7 +57,7 @@ def extract_video_id(url):
 
 def get_transcript(
     video_id: str,
-    languages: List[str] = ['ko', 'en'],
+    languages: List[str] = None,
     fallback_enabled: bool = True
 ) -> List[Dict[str, Union[float, str]]]:
     """
@@ -67,6 +66,8 @@ def get_transcript(
     # 환경변수에서 프록시 정보 읽기
     proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
     proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    if languages is None:
+        languages = ['ko', 'en']
 
     proxy_config = None
     if proxy_username and proxy_password:
