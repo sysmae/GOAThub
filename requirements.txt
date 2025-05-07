@@ -6,3 +6,4 @@ langchain>=0.3.24
 langchain_openai>=0.3.14
 langchain-google-genai>=0.6.15
 streamlit_mermaid >= 0.3.0
+notion_client>=2.0.0
