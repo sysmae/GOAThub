@@ -1,6 +1,7 @@
 import base64
 import os
 import re
+from typing import Dict, List, Union
 
 import requests
 import streamlit as st
@@ -11,6 +12,8 @@ from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import WebshareProxyConfig
 
 load_dotenv()  # .env 파일에서 환경변수 로드
 
@@ -28,28 +31,71 @@ def extract_video_id(url):
     return None
 
 
-# kome.ai API로 대본 추출
-def get_transcript_kome(video_id):
-    url = "https://api.kome.ai/api/tools/youtube-transcripts"
-    payload = {"video_id": video_id, "format": True}
+# # kome.ai API로 대본 추출
+# def get_transcript(video_id):
+#     url = "https://api.kome.ai/api/tools/youtube-transcripts"
+#     payload = {"video_id": video_id, "format": True}
+#     try:
+#         response = requests.post(url, json=payload, timeout=30)
+#         response.raise_for_status()
+#         data = response.json()
+#         # transcript가 리스트면 각 segment의 text 합치기
+#         if "transcript" in data:
+#             transcript = data["transcript"]
+#             if isinstance(transcript, list):
+#                 full_text = " ".join([seg.get("text", "") for seg in transcript])
+#             else:
+#                 full_text = str(transcript)
+#             return full_text, transcript
+#         elif "text" in data:
+#             return data["text"], data
+#         else:
+#             return f"대본 데이터 구조를 알 수 없습니다: {data}", None
+#     except Exception as e:
+#         return f"오류 발생: {str(e)}", None
+
+
+def get_transcript(
+    video_id: str,
+    languages: List[str] = None,
+    fallback_enabled: bool = True
+) -> List[Dict[str, Union[float, str]]]:
+    """
+    Webshare 프록시를 활용한 유튜브 대본 추출 함수 (환경변수 기반)
+    """
+    # 환경변수에서 프록시 정보 읽기
+    proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
+    proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    if languages is None:
+        languages = ['ko', 'en']
+
+    proxy_config = None
+    if proxy_username and proxy_password:
+        proxy_config = WebshareProxyConfig(
+            proxy_username=proxy_username,
+            proxy_password=proxy_password
+        )
+
+    yt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
+
     try:
-        response = requests.post(url, json=payload, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        # transcript가 리스트면 각 segment의 text 합치기
-        if "transcript" in data:
-            transcript = data["transcript"]
-            if isinstance(transcript, list):
-                full_text = " ".join([seg.get("text", "") for seg in transcript])
-            else:
-                full_text = str(transcript)
-            return full_text, transcript
-        elif "text" in data:
-            return data["text"], data
-        else:
-            return f"대본 데이터 구조를 알 수 없습니다: {data}", None
-    except Exception as e:
-        return f"오류 발생: {str(e)}", None
+        transcript = yt_api.list_transcripts(video_id)\
+                          .find_transcript(languages)\
+                          .fetch()
+        return transcript.to_raw_data()
+    except Exception as primary_error:
+        if not fallback_enabled:
+            raise
+        try:
+            generated = yt_api.list_transcripts(video_id)\
+                            .find_generated_transcript(languages)\
+                            .fetch()
+            return generated.to_raw_data()
+        except Exception as fallback_error:
+            raise ConnectionError(
+                f"대본 추출 실패: {primary_error} → {fallback_error}"
+            ) from fallback_error
+
 
 
 # LangChain 요약 함수 (Google GenAI 사용)
@@ -155,7 +201,10 @@ def load_video(url):
 
     # 영상 ID가 바뀐 경우에만 업데이트
     if st.session_state.video_id != vid:
-        txt, data = get_transcript_kome(vid)
+        # txt, data = get_transcript(vid,'agfacohl','422jprho3c0v')
+        data = get_transcript(vid)
+        txt = " ".join([seg.get("text", "") for seg in data])
+
         if data:
             st.session_state.update(
                 {
@@ -177,65 +226,6 @@ def run_summary():
     with st.spinner("요약 생성 중…"):
         st.session_state.summary = summarize_text(st.session_state.transcript_text)
         st.session_state.summarize_clicked = True
-
-
-# def render_mermaid_html(code: str) -> str:
-#     # Mermaid 코드 HTML 문서 생성
-#     html = f"""
-# <!DOCTYPE html>
-# <html>
-# <head>
-#   <meta charset="utf-8">
-#   <script type="module">
-#     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-#     mermaid.initialize({{ startOnLoad: true }});
-#   </script>
-# </head>
-# <body>
-#   <div class="mermaid">
-#   {code}
-#   </div>
-# </body>
-# </html>
-# """
-#     # HTML을 base64로 인코딩
-#     encoded = base64.b64encode(html.encode("utf-8")).decode("utf-8")
-#     iframe_html = f"""
-# <iframe src="data:text/html;base64,{encoded}"
-#         width="100%" height="400" frameborder="0">
-# </iframe>
-# """
-#     return iframe_html
-
-
-# === 요약 렌더링 ===
-
-
-# def render_summary():
-#     import re
-
-#     summary = st.session_state.summary
-
-#     if not summary:
-#         return
-
-#     with st.expander("🔍 요약 결과 보기", expanded=True):
-#         # 1. Mermaid 코드 블록 추출
-#         mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", summary)
-#         for code in mermaid_blocks:
-#             html = render_mermaid_html(code.strip())
-#             st.components.v1.html(html, height=450, scrolling=True)
-
-#         # 2. Mermaid 코드 제거하고 나머지 마크다운 렌더링
-#         cleaned = re.sub(r"```mermaid\s+[\s\S]+?```", "", summary)
-#         st.markdown(cleaned)
-
-#     st.download_button(
-#         "요약 노트 다운로드",
-#         summary.encode(),
-#         f"summary_{st.session_state.video_id}.md",
-#         "text/markdown",
-#     )
 
 
 def render_summary():
