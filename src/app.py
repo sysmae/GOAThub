@@ -66,8 +66,8 @@ def get_transcript(
     # 환경변수에서 프록시 정보 읽기
     proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
     proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
-    print(f"Proxy Username: {proxy_username}")
-    print(f"Proxy Password: {proxy_password}")
+    # print(f"Proxy Username: {proxy_username}")
+    # print(f"Proxy Password: {proxy_password}")
     if languages is None:
         languages = ['ko', 'en']
 
