@@ -66,6 +66,8 @@ def get_transcript(
     # 환경변수에서 프록시 정보 읽기
     proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
     proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    print(f"Proxy Username: {proxy_username}")
+    print(f"Proxy Password: {proxy_password}")
     if languages is None:
         languages = ['ko', 'en']
 
@@ -287,7 +289,7 @@ if st.session_state.transcript_data:
         render_summary()
 
     with col2:
-        st.video(f"https://youtu.be/{st.session_state.video_id}", start_time=0)
+        # st.video(f"https://youtu.be/{st.session_state.video_id}", start_time=0)
         st.subheader("원본 대본")
         st.text_area("", st.session_state.transcript_text, height=300)
         if isinstance(st.session_state.transcript_data, list):
