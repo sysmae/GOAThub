@@ -20,6 +20,20 @@ git clone https://github.com/sysmae/GOAThub.git
 cd GOAThub
 ```
 
+### 3. 필수 패키지 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. 환경 변수 설정
+
+`.env` 파일을 프로젝트 루트 디렉토리에 만들고 API key를 입력하세요.
+
+```env
+GOOGLE_API_KEY=your-google-api-key
+```
+
 ---
 
 ## 코드 스타일 및 린팅
@@ -83,7 +97,7 @@ ruff check app/ --fix
 
 ### 2. 주의사항
 
-- 이슈 번호 포함 권장 (예: `feature/GOAT-123-summary`)
+- 이슈 번호 포함 권장 (예: `feature/goat-123-summary`)
 - 영문 소문자, 숫자, 하이픈(`-`)만 사용
 
 ---
@@ -106,11 +120,16 @@ git checkout -b feature/new-feature
 ### 3. 커밋 규칙
 
 - **구조**: `: `
+  - `feat: `새로운 기능 추가
+  - `fix: `버그 수정
+  - `doc: `문서 변경
+  - `refactor: `코드 리팩터링
+  - `test: `테스트 코드 추가/설정
 - **예시**:
   ```
   feat: YouTube 요약 기능 추가
   fix: 로그인 오류 처리 개선
-  docs: API 문서 보완
+  doc: API 문서 보완
   ```
 
 ### 4. 원격 저장소 업로드
@@ -128,6 +147,7 @@ git push origin feature/new-feature
 - 반드시 `main` 브랜치 대상
 - 최소 1명 이상의 리뷰 승인 필요
 - 모든 CI 검사(린트/테스트) 통과 필수
+- PR 템플릿에 맞춰서 작성
 
 ### 2. 머지 후 처리
 
@@ -214,7 +234,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Ruff
         run: pip install ruff
@@ -240,7 +260,7 @@ jobs:
       - name: Enforce branch naming
         uses: deepakputhraya/action-branch-name@master
         with:
-          regex: '^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$'
+          regex: "^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$"
           min_length: 8
           max_length: 50
           ignore: main,develop
