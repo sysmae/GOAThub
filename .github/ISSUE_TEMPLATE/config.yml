@@ -1,0 +1,27 @@
+blank_issues_enabled: false
+contact_links: []
+issue_templates:
+  - name: 🐞 버그 리포트
+    description: 예기치 않은 문제나 오류를 보고합니다.
+    labels: ["bug"]
+    file: bug_report.md
+
+  - name: ✅ 테스트 필요
+    description: 테스트가 필요한 기능이나 케이스를 제안합니다.
+    labels: ["test"]
+    file: test_required.md
+
+  - name: ❓ 질문
+    description: 코드, 프로젝트 사용법, 개발 환경 등에 대해 질문합니다.
+    labels: ["question"]
+    file: question.md
+
+  - name: 💬 논의
+    description: 아이디어나 아키텍처, 방향성에 대한 논의를 시작합니다.
+    labels: ["discussion"]
+    file: discussion.md
+
+  - name: ✨ 기능 구현
+    description: 새로운 기능의 구현 요청이나 제안을 작성합니다.
+    labels: ["enhancement"]
+    file: feature_request.md
