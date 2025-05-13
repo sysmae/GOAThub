@@ -1,6 +1,7 @@
 import base64
 import os
 import re
+from textwrap import wrap
 from typing import Dict, List, Union
 
 import requests
@@ -33,6 +34,21 @@ def set_env_variable(key, value, env_path=".env"):
 
     # 반영을 위해 다시 로드
     load_dotenv(dotenv_path=env_path, override=True)
+
+def extract_notion_database_id(notion_url: str) -> str:
+    """
+    Notion 전체 URL에서 Database/Page ID를 추출합니다.
+    예시: https://www.notion.so/sysmae/OSSW-01-GOATHUB-1d01566753468017b2a1ea7a7eccb17e
+    결과: 1d01566753468017b2a1ea7a7eccb17e
+    """
+    import re
+    # Notion URL의 마지막 하이픈 뒤 32자(16진수) 추출
+    match = re.search(r"([0-9a-fA-F]{32})", notion_url.replace("-", ""))
+    if match:
+        return match.group(1)
+    else:
+        return ""
+
 # 유튜브 비디오 ID 추출 함수
 def extract_video_id(url):
     patterns = [
@@ -176,6 +192,8 @@ def init_session():
         "summarize_clicked": False,
         "summarizing": False,
         "summarized": False,
+        "auto_save_to_notion": False,
+        "notion_saved": False,
     }
     for k, v in default_values.items():
         if k not in st.session_state:
@@ -208,6 +226,7 @@ def load_video(url):
                     "summarize_clicked": False,
                     "summarizing": False,
                     "summarized": False,
+                    "notion_saved": False,
                 }
             )
         else:
@@ -219,6 +238,12 @@ def run_summary():
     with st.spinner("요약 생성 중…"):
         st.session_state.summary = summarize_text(st.session_state.transcript_text)
         st.session_state.summarize_clicked = True
+
+        # ✅ 자동 저장이 켜져 있으면 바로 Notion 저장
+        if st.session_state.get("auto_save_to_notion") and not st.session_state.get("notion_saved", False):
+            save_to_notion_as_page(st.session_state.summary)
+            st.session_state["notion_saved"] = True
+
 
 
 def render_summary():
@@ -380,7 +405,7 @@ def save_to_notion_as_page(summary: str):
     Save the summary as a new page in Notion with proper formatting.
     """
     notion_token = os.getenv("NOTION_API_TOKEN")
-    parent_page_id = os.getenv("NOTION_PAGE_ID")
+    parent_database_id = os.getenv("NOTION_DATABASE_ID")
 
     if not notion_token:
         st.error("Notion API token is not set.")
@@ -396,10 +421,57 @@ def save_to_notion_as_page(summary: str):
 
         # Convert content to Notion blocks
         blocks = markdown_to_notion_blocks(content)
+        blocks.append({
+            "object": "block",
+            "type": "divider",
+            "divider": {}
+        })
+
+        # 2. 제목: 원본 대본
+        blocks.append({
+            "object": "block",
+            "type": "heading_2",
+            "heading_2": {
+                "rich_text": [{"type": "text", "text": {"content": "📜 대본"}}]
+            }
+        })
+
+        # 3. 본문: 대본 텍스트를 적절히 나눠서 블록으로 추가 (2000자 제한 회피)
+        transcript_text = st.session_state.get("transcript_text", "")
+        wrapped_segments = wrap(transcript_text, width=1800)
+
+        for segment in wrapped_segments:
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": segment}}]
+                }
+            })
 
         # Create a new page in Notion
+        yt_url = st.session_state.get("yt_url", "")
+        thumbnail_url = ""
+        if yt_url:
+            video_id = extract_video_id(yt_url)
+            if video_id:
+                thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+
+        # 썸네일이 없을 경우 기본 이미지로 대체 (Notion이 허용하는 외부 이미지 URL 필요)
+        thumbnail_url = thumbnail_url or "https://via.placeholder.com/800x400?text=No+Thumbnail"
+
         notion.pages.create(
-            parent={"type": "page_id", "page_id": parent_page_id},
+            parent={"type": "database_id", "database_id": parent_database_id},
+            cover={
+                "type": "external",
+                "external": {
+                    "url": thumbnail_url or ""
+                }
+            },
+            icon={
+                "type": "emoji",
+                "emoji": "🧠"
+            },
             properties={
                 "title": [
                     {
@@ -408,8 +480,9 @@ def save_to_notion_as_page(summary: str):
                     }
                 ]
             },
-            children=blocks,
+            children=blocks,  # 위에서 추가된 요약 + 대본 포함된 전체 블록
         )
+
         st.success("Summary has been saved as a new page in Notion!")
     except Exception as e:
         st.error(f"Error saving to Notion: {e}")
@@ -422,20 +495,31 @@ st.title("유튜브 대본 요약 서비스")
 
 yt_url = st.text_input("유튜브 링크 입력", placeholder="https://www.youtube.com/watch?v=...")
 if yt_url:
-    load_video(yt_url)
+    # 유효한 유튜브 ID만 있을 때만 load_video 실행
+    vid = extract_video_id(yt_url)
+    st.session_state["yt_url"] = yt_url
+    if vid:
+        load_video(yt_url)
+    else:
+        st.error("유효하지 않은 유튜브 링크입니다.")
 
 # === Notion 설정 입력 ===
 with st.expander("⚙️ Notion 설정 입력", expanded=False):
     user_token = st.text_input("🔑 Notion API Token", type="password", placeholder="secret_...")
-    user_page_id = st.text_input("📄 Notion Page ID", placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+    user_database_url = st.text_input("📄 Notion Database URL", placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     if st.button("✅ OK - 설정 저장"):
-        if user_token and user_page_id:
+        if user_token and user_database_url:
             set_env_variable("NOTION_API_TOKEN", user_token)
-            set_env_variable("NOTION_PAGE_ID", user_page_id)
+            set_env_variable("NOTION_DATABASE_ID", extract_notion_database_id(user_database_url))
             st.success("✅ 환경변수 저장 완료! Notion 저장 기능에 바로 적용됩니다.")
         else:
             st.warning("⚠️ 모든 필드를 입력해야 합니다.")
+
+# === 자동 저장 토글(실시간 반영) ===
+st.session_state.auto_save_to_notion = st.checkbox(
+    "✅ 요약 후 자동 Notion 저장", value=st.session_state.get("auto_save_to_notion", False), key="auto_save_toggle"
+)
 
 # === 요약 및 대본 표시 ===
 if st.session_state.transcript_data:
@@ -450,9 +534,16 @@ if st.session_state.transcript_data:
 
         render_summary()
 
-        if st.session_state.get("summary"):
+    if st.session_state.get("summary"):
+        # 자동 저장 토글이 켜져 있으면 요약 생성 후 바로 저장
+        if st.session_state.get("auto_save_to_notion") and not st.session_state.get("notion_saved", False):
+            save_to_notion_as_page(st.session_state["summary"])
+            st.session_state["notion_saved"] = True
+        elif not st.session_state.get("auto_save_to_notion"):
             if st.button("Save to Notion as Page"):
                 save_to_notion_as_page(st.session_state["summary"])
+                st.session_state["notion_saved"] = True
+
 
     with col2:
         st.subheader("원본 대본")
