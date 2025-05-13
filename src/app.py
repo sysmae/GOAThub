@@ -34,6 +34,21 @@ def set_env_variable(key, value, env_path=".env"):
 
     # 반영을 위해 다시 로드
     load_dotenv(dotenv_path=env_path, override=True)
+
+def extract_notion_database_id(notion_url: str) -> str:
+    """
+    Notion 전체 URL에서 Database/Page ID를 추출합니다.
+    예시: https://www.notion.so/sysmae/OSSW-01-GOATHUB-1d01566753468017b2a1ea7a7eccb17e
+    결과: 1d01566753468017b2a1ea7a7eccb17e
+    """
+    import re
+    # Notion URL의 마지막 하이픈 뒤 32자(16진수) 추출
+    match = re.search(r"([0-9a-fA-F]{32})", notion_url.replace("-", ""))
+    if match:
+        return match.group(1)
+    else:
+        return ""
+
 # 유튜브 비디오 ID 추출 함수
 def extract_video_id(url):
     patterns = [
@@ -491,12 +506,12 @@ if yt_url:
 # === Notion 설정 입력 ===
 with st.expander("⚙️ Notion 설정 입력", expanded=False):
     user_token = st.text_input("🔑 Notion API Token", type="password", placeholder="secret_...")
-    user_database_id = st.text_input("📄 Notion Database ID", placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    user_database_url = st.text_input("📄 Notion Database URL", placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
     if st.button("✅ OK - 설정 저장"):
-        if user_token and user_database_id:
+        if user_token and user_database_url:
             set_env_variable("NOTION_API_TOKEN", user_token)
-            set_env_variable("NOTION_DATABASE_ID", user_database_id)
+            set_env_variable("NOTION_DATABASE_ID", extract_notion_database_id(user_database_url))
             st.success("✅ 환경변수 저장 완료! Notion 저장 기능에 바로 적용됩니다.")
         else:
             st.warning("⚠️ 모든 필드를 입력해야 합니다.")
