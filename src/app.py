@@ -120,7 +120,7 @@ def get_transcript(
     호출 직전에 check_proxy_usage()로 프록시 사용 여부를 로그합니다.
     """
     # 1) 프록시 동작 확인
-    check_proxy_usage()
+    # check_proxy_usage()
 
     # 2) 언어 기본값 설정
     if languages is None:
@@ -138,7 +138,8 @@ def get_transcript(
 
     # 5) 대본 추출 시도 (기본 → 생성본 순)
     try:
-        transcript = yt_api.list_transcripts(video_id).find_transcript(languages).fetch()
+        # transcript = yt_api.list_transcripts(video_id).find_transcript(languages).fetch()
+        transcript = yt_api.fetch(video_id=video_id, languages=["ko", "en"])
         return transcript.to_raw_data()
     except Exception as primary_error:
         if not fallback_enabled:
