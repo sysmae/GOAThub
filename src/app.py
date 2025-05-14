@@ -117,58 +117,36 @@ def get_transcript(
 ) -> List[Dict[str, Union[float, str]]]:
     """
     Webshare 프록시를 활용한 유튜브 대본 추출 함수.
-    호출 직전에 check_proxy_usage()로 프록시 사용 여부를 로그합니다.
+    ko, en 대본이 없으면 사용 가능한 언어 리스트를 조회해 재시도합니다.
     """
-    # 1) 프록시 동작 확인
-    # check_proxy_usage()
-
-    # 2) 언어 기본값 설정
+    # 1) 언어 기본값 설정
     if languages is None:
         languages = ["ko", "en"]
 
-    # 3) 세션 상태에서 프록시 자격증명 읽어 와 Config 생성
+    # 2) 세션 상태에서 프록시 자격증명 읽어 와 Config 생성
     username = st.session_state.get("proxy_username")
     password = st.session_state.get("proxy_password")
     proxy_config = None
     if username and password:
         proxy_config = WebshareProxyConfig(proxy_username=username, proxy_password=password)
 
-    # 4) Transcript API 인스턴스 생성
+    # 3) Transcript API 인스턴스 생성
     yt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
-    # 4) 사용 가능한 대본 리스트 조회
+    # 4) 우선 요청 언어로 fetch 시도
     try:
-        transcript_list = yt_api.list_transcripts(video_id)
-    except Exception as e:
-        raise ConnectionError(f"대본 리스트 조회 실패: {e}") from e
-
-    # 5) 요청 언어 우선순위로 대본 검색
-    transcript = None
-    for lang in languages:
+        transcript = yt_api.fetch(video_id=video_id, languages=languages)
+        return transcript.to_raw_data()
+    except Exception:
+        # 5) ko, en 등 요청 언어가 없을 때 사용 가능한 언어로 재시도
         try:
-            transcript = transcript_list.find_transcript([lang])
-            break
-        except NoTranscriptFound:
-            continue
-
-    # 6) 대체 언어 사용(fallback)
-    if transcript is None:
-        if not fallback_enabled:
-            raise ConnectionError(f"대본 추출 실패: 요청된 언어({languages})에 대한 대본 없음")
-        try:
-            # 첫 번째 사용 가능한 대본으로 대체
-            transcript = next(iter(transcript_list))
-        except StopIteration:
-            raise ConnectionError(
-                f"대본 추출 실패: 비디오({video_id})에 사용 가능한 대본 없음"
-            ) from e
-
-    # 7) 대본 데이터 가져오기
-    try:
-        fetched = transcript.fetch()
-        return fetched.to_raw_data()
-    except Exception as e:
-        raise ConnectionError(f"대본 추출 실패: {e}") from e
+            transcript_list = yt_api.list_transcripts(video_id)
+            available_langs = [t.language_code for t in transcript_list]
+            if not available_langs:
+                raise ConnectionError("대본 추출 실패: 사용 가능한 언어 없음")
+            return yt_api.fetch(video_id=video_id, languages=available_langs).to_raw_data()
+        except Exception as e2:
+            raise ConnectionError(f"대본 추출 실패: {e2}") from e2
 
 
 # LangChain 요약 함수 (Google GenAI 사용)
