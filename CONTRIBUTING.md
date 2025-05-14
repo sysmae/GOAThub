@@ -77,8 +77,8 @@ pip install ruff
 # 전체 검사
 ruff check .
 
-# 자동 수정
-ruff check app/ --fix
+# 전체 자동 수정
+ruff check . --fix
 ```
 
 ---
@@ -99,6 +99,7 @@ ruff check app/ --fix
 
 - 이슈 번호 포함 권장 (예: `feature/goat-123-summary`)
 - 영문 소문자, 숫자, 하이픈(`-`)만 사용
+- 쉽표는 사용하지 않음
 
 ---
 
@@ -234,7 +235,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install Ruff
         run: pip install ruff
@@ -260,7 +261,7 @@ jobs:
       - name: Enforce branch naming
         uses: deepakputhraya/action-branch-name@master
         with:
-          regex: "^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$"
+          regex: '^(feature|bugfix|hotfix|refactor|doc)/[a-z0-9._-]+$'
           min_length: 8
           max_length: 50
           ignore: main,develop
