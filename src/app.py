@@ -120,7 +120,7 @@ def get_transcript(
     호출 직전에 check_proxy_usage()로 프록시 사용 여부를 로그합니다.
     """
     # 1) 프록시 동작 확인
-    # check_proxy_usage()
+    check_proxy_usage()
 
     # 2) 언어 기본값 설정
     if languages is None:
