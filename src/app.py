@@ -120,7 +120,7 @@ def get_transcript(
     호출 직전에 check_proxy_usage()로 프록시 사용 여부를 로그합니다.
     """
     # 1) 프록시 동작 확인
-    check_proxy_usage()
+    # check_proxy_usage()
 
     # 2) 언어 기본값 설정
     if languages is None:
@@ -181,7 +181,9 @@ def summarize_text(text):
 
 ### 2. 시각적 요소
 - 각 섹션/항목에 어울리는 이모지 활용
-- 복잡한 관계나 흐름은 mermaid, ASCII 등으로 시각화(필요시)
+- 필요 시 간단한 흐름도(flowchart) 형태의 Mermaid 다이어그램을 Notion 호환 기본 문법으로 삽입
+- Mermaid 코드 블록은 반드시 세 개의 backtick과 `mermaid` 키워드로 감싸기
+- 복잡한 문법은 사용하지 않고, 기본 형태로 제작
 - 표, 순서도, 타임라인 등 Markdown 지원 요소 적극 사용
 
 ### 3. 서술 스타일
