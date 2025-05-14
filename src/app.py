@@ -135,7 +135,7 @@ def get_transcript(
 
     # 4) 우선 요청 언어로 fetch 시도
     try:
-        transcript = yt_api.fetch(video_id=video_id, languages=languages)
+        transcript = yt_api.fetch(video_id)
         return transcript.to_raw_data()
     except Exception:
         # 5) ko, en 등 요청 언어가 없을 때 사용 가능한 언어로 재시도
