@@ -18,8 +18,6 @@ from streamlit_local_storage import LocalStorage
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
-load_dotenv()  # .env 파일에서 환경변수 로드
-
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
 
@@ -30,6 +28,46 @@ if "notion_db_id" not in st.session_state:
     st.session_state.notion_db_id = localS.getItem("notion_db_id") or ""
 
 
+# 1) .env 파일 로드
+load_dotenv()
+
+
+# 2) Streamlit 세션 상태에 프록시 정보 초기 저장
+if "proxy_username" not in st.session_state:
+    st.session_state["proxy_username"] = os.getenv("WEBSHARE_PROXY_USERNAME")
+    st.session_state["proxy_password"] = os.getenv("WEBSHARE_PROXY_PASSWORD")
+
+
+def check_proxy_usage() -> None:
+    """
+    Webshare 프록시가 정상 작동하는지 간단히 확인합니다.
+    httpbin.org/ip 호출 시 실제 외부 IP를 조회합니다.
+    """
+    username = st.session_state.get("proxy_username")
+    password = st.session_state.get("proxy_password")
+    if not username or not password:
+        st.write("🔗 프록시 미설정: 직접 연결로 요청합니다.")
+        return
+
+    proxy_host = "p.webshare.io"
+    # 80, 1080, 3128 중 하나를 선택
+    proxy_port = os.getenv("WEBSHARE_PROXY_PORT", "80")
+
+    proxy_url = f"http://{username}:{password}@{proxy_host}:{proxy_port}"
+    proxies = {
+        "http": proxy_url,
+        "https": proxy_url,  # HTTPS도 같은 포트로 CONNECT
+    }
+
+    try:
+        resp = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
+        origin = resp.json().get("origin")
+        st.write(f"🔒 프록시 적용됨: 조회된 IP → {origin}")
+    except Exception as e:
+        st.write(f"⚠️ 프록시 IP 조회 실패: {e}")
+
+
+# 노션 DB ID 추출 함수
 def extract_notion_database_id(notion_input: str) -> str:
     """
     Notion 전체 URL 또는 순수 DB 아이디에서 Database/Page ID를 추출합니다.
@@ -74,28 +112,31 @@ def extract_video_id(url):
     return None
 
 
-# 유튜브 대본 추출 함수
 def get_transcript(
     video_id: str, languages: List[str] = None, fallback_enabled: bool = True
 ) -> List[Dict[str, Union[float, str]]]:
     """
-    Webshare 프록시를 활용한 유튜브 대본 추출 함수 (환경변수 기반)
+    Webshare 프록시를 활용한 유튜브 대본 추출 함수.
+    호출 직전에 check_proxy_usage()로 프록시 사용 여부를 로그합니다.
     """
-    # 환경변수에서 프록시 정보 읽기
-    proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
-    proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
+    # 1) 프록시 동작 확인
+    check_proxy_usage()
 
+    # 2) 언어 기본값 설정
     if languages is None:
         languages = ["ko", "en"]
 
+    # 3) 세션 상태에서 프록시 자격증명 읽어 와 Config 생성
+    username = st.session_state.get("proxy_username")
+    password = st.session_state.get("proxy_password")
     proxy_config = None
-    if proxy_username and proxy_password:
-        proxy_config = WebshareProxyConfig(
-            proxy_username=proxy_username, proxy_password=proxy_password
-        )
+    if username and password:
+        proxy_config = WebshareProxyConfig(proxy_username=username, proxy_password=password)
 
+    # 4) Transcript API 인스턴스 생성
     yt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
+    # 5) 대본 추출 시도 (기본 → 생성본 순)
     try:
         transcript = yt_api.list_transcripts(video_id).find_transcript(languages).fetch()
         return transcript.to_raw_data()
@@ -198,7 +239,7 @@ def init_session():
         "summarize_clicked": False,
         "summarizing": False,
         "summarized": False,
-        "auto_save_to_notion": False,
+        "auto_save_to_notion": True,  # 자동 저장 기본값 True
         "notion_saved": False,
     }
     for k, v in default_values.items():
@@ -548,7 +589,8 @@ if st.session_state.transcript_data:
     if st.session_state.get("summary"):
         # 자동 저장 토글이 켜져 있으면 요약 생성 후 바로 저장
         if st.session_state.get("auto_save_to_notion") and not st.session_state.get(
-            "notion_saved", False
+            "notion_saved",
+            False,
         ):
             save_to_notion_as_page(st.session_state["summary"])
             st.session_state["notion_saved"] = True
