@@ -15,7 +15,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from notion_client import Client
 from streamlit_local_storage import LocalStorage
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
 # LocalStorage 인스턴스 생성
@@ -136,23 +136,39 @@ def get_transcript(
     # 4) Transcript API 인스턴스 생성
     yt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
-    # 5) 대본 추출 시도 (기본 → 생성본 순)
+    # 4) 사용 가능한 대본 리스트 조회
     try:
-        # transcript = yt_api.list_transcripts(video_id).find_transcript(languages).fetch()
-        transcript = yt_api.fetch(video_id=video_id, languages=["ko", "en"])
-        return transcript.to_raw_data()
-    except Exception as primary_error:
-        if not fallback_enabled:
-            raise
+        transcript_list = yt_api.list_transcripts(video_id)
+    except Exception as e:
+        raise ConnectionError(f"대본 리스트 조회 실패: {e}") from e
+
+    # 5) 요청 언어 우선순위로 대본 검색
+    transcript = None
+    for lang in languages:
         try:
-            generated = (
-                yt_api.list_transcripts(video_id).find_generated_transcript(languages).fetch()
-            )
-            return generated.to_raw_data()
-        except Exception as fallback_error:
+            transcript = transcript_list.find_transcript([lang])
+            break
+        except NoTranscriptFound:
+            continue
+
+    # 6) 대체 언어 사용(fallback)
+    if transcript is None:
+        if not fallback_enabled:
+            raise ConnectionError(f"대본 추출 실패: 요청된 언어({languages})에 대한 대본 없음")
+        try:
+            # 첫 번째 사용 가능한 대본으로 대체
+            transcript = next(iter(transcript_list))
+        except StopIteration:
             raise ConnectionError(
-                f"대본 추출 실패: {primary_error} → {fallback_error}"
-            ) from fallback_error
+                f"대본 추출 실패: 비디오({video_id})에 사용 가능한 대본 없음"
+            ) from e
+
+    # 7) 대본 데이터 가져오기
+    try:
+        fetched = transcript.fetch()
+        return fetched.to_raw_data()
+    except Exception as e:
+        raise ConnectionError(f"대본 추출 실패: {e}") from e
 
 
 # LangChain 요약 함수 (Google GenAI 사용)
