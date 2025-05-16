@@ -14,40 +14,90 @@ from langchain.prompts import PromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from notion_client import Client
-from youtube_transcript_api import YouTubeTranscriptApi
+from streamlit_local_storage import LocalStorage
+from youtube_transcript_api import NoTranscriptFound, YouTubeTranscriptApi
 from youtube_transcript_api.proxies import WebshareProxyConfig
 
-load_dotenv()  # .env 파일에서 환경변수 로드
+# LocalStorage 인스턴스 생성
+localS = LocalStorage()
 
-def set_env_variable(key, value, env_path=".env"):
+# 세션 상태 초기화 (스크립트 최상단)
+if "notion_token" not in st.session_state:
+    st.session_state.notion_token = localS.getItem("notion_token") or ""
+if "notion_db_id" not in st.session_state:
+    st.session_state.notion_db_id = localS.getItem("notion_db_id") or ""
+
+
+# 1) .env 파일 로드
+load_dotenv()
+
+
+# 2) Streamlit 세션 상태에 프록시 정보 초기 저장
+if "proxy_username" not in st.session_state:
+    st.session_state["proxy_username"] = os.getenv("WEBSHARE_PROXY_USERNAME")
+    st.session_state["proxy_password"] = os.getenv("WEBSHARE_PROXY_PASSWORD")
+
+
+def check_proxy_usage() -> None:
     """
-    .env 파일의 환경변수를 key=value 형태로 저장합니다. 기존 값은 덮어씌워집니다.
+    Webshare 프록시가 정상 작동하는지 간단히 확인합니다.
+    httpbin.org/ip 호출 시 실제 외부 IP를 조회합니다.
     """
-    from dotenv import dotenv_values
+    username = st.session_state.get("proxy_username")
+    password = st.session_state.get("proxy_password")
+    if not username or not password:
+        st.write("🔗 프록시 미설정: 직접 연결로 요청합니다.")
+        return
 
-    current = dotenv_values(env_path)
-    current[key] = value
+    proxy_host = "p.webshare.io"
+    # 80, 1080, 3128 중 하나를 선택
+    proxy_port = os.getenv("WEBSHARE_PROXY_PORT", "80")
 
-    with open(env_path, "w", encoding="utf-8") as f:
-        for k, v in current.items():
-            f.write(f"{k}={v}\n")
+    proxy_url = f"http://{username}:{password}@{proxy_host}:{proxy_port}"
+    proxies = {
+        "http": proxy_url,
+        "https": proxy_url,  # HTTPS도 같은 포트로 CONNECT
+    }
 
-    # 반영을 위해 다시 로드
-    load_dotenv(dotenv_path=env_path, override=True)
+    try:
+        resp = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
+        origin = resp.json().get("origin")
+        st.write(f"🔒 프록시 적용됨: 조회된 IP → {origin}")
+    except Exception as e:
+        st.write(f"⚠️ 프록시 IP 조회 실패: {e}")
 
-def extract_notion_database_id(notion_url: str) -> str:
+
+# 노션 DB ID 추출 함수
+def extract_notion_database_id(notion_input: str) -> str:
     """
-    Notion 전체 URL에서 Database/Page ID를 추출합니다.
-    예시: https://www.notion.so/sysmae/OSSW-01-GOATHUB-1d01566753468017b2a1ea7a7eccb17e
-    결과: 1d01566753468017b2a1ea7a7eccb17e
+    Notion 전체 URL 또는 순수 DB 아이디에서 Database/Page ID를 추출합니다.
+       입력이 이미 32자리 16진수 ID면 그대로 반환하고, URL이면 마지막 하이픈 뒤 ID를 추출합니다.    예시: https://www.notion.so/sysmae/OSSW-01-GOATHUB-1d01566753468017b2a1ea7a7eccb17e
+       결과: 1d01566753468017b2a1ea7a7eccb17e
     """
     import re
-    # Notion URL의 마지막 하이픈 뒤 32자(16진수) 추출
-    match = re.search(r"([0-9a-fA-F]{32})", notion_url.replace("-", ""))
+
+    text = notion_input.strip()
+
+    # 1) 순수 DB 아이디인지 확인 (하이픈 제거 후 32자리 16진수 매칭)
+    clean = text.replace("-", "")
+    if re.fullmatch(r"[0-9a-fA-F]{32}", clean):
+        return clean.lower()  # 이미 ID면 그대로 반환[2]
+
+    # 2) URL 형태일 경우, Notion URL의 마지막 하이픈 뒤 32자(16진수) 추출
+    parts = text.split("-")
+    if len(parts) > 1:
+        candidate = parts[-1].replace("-", "")
+        if re.fullmatch(r"[0-9a-fA-F]{32}", candidate):
+            return candidate.lower()
+
+    # 3) 전체 문자열에서 32자리 16진수 패턴 탐색
+    match = re.search(r"[0-9a-fA-F]{32}", text)
     if match:
-        return match.group(1)
-    else:
-        return ""
+        return match.group(0).lower()
+
+    # 실패 시 빈 문자열 반환
+    return ""
+
 
 # 유튜브 비디오 ID 추출 함수
 def extract_video_id(url):
@@ -63,48 +113,40 @@ def extract_video_id(url):
 
 
 def get_transcript(
-    video_id: str,
-    languages: List[str] = None,
-    fallback_enabled: bool = True
+    video_id: str, languages: List[str] = None, fallback_enabled: bool = True
 ) -> List[Dict[str, Union[float, str]]]:
     """
-    Webshare 프록시를 활용한 유튜브 대본 추출 함수 (환경변수 기반)
+    Webshare 프록시를 활용한 유튜브 대본 추출 함수.
+    ko, en 대본이 없으면 사용 가능한 언어 리스트를 조회해 재시도합니다.
     """
-    # 환경변수에서 프록시 정보 읽기
-    proxy_username = os.getenv("WEBSHARE_PROXY_USERNAME")
-    proxy_password = os.getenv("WEBSHARE_PROXY_PASSWORD")
-    # print(f"Proxy Username: {proxy_username}")
-    # print(f"Proxy Password: {proxy_password}")
+    # 1) 언어 기본값 설정
     if languages is None:
-        languages = ['ko', 'en']
+        languages = ["ko", "en"]
 
+    # 2) 세션 상태에서 프록시 자격증명 읽어 와 Config 생성
+    username = st.session_state.get("proxy_username")
+    password = st.session_state.get("proxy_password")
     proxy_config = None
-    if proxy_username and proxy_password:
-        proxy_config = WebshareProxyConfig(
-            proxy_username=proxy_username,
-            proxy_password=proxy_password
-        )
+    if username and password:
+        proxy_config = WebshareProxyConfig(proxy_username=username, proxy_password=password)
 
+    # 3) Transcript API 인스턴스 생성
     yt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
+    # 4) 우선 요청 언어로 fetch 시도
     try:
-        transcript = yt_api.list_transcripts(video_id)\
-                          .find_transcript(languages)\
-                          .fetch()
+        transcript = yt_api.fetch(video_id)
         return transcript.to_raw_data()
-    except Exception as primary_error:
-        if not fallback_enabled:
-            raise
+    except Exception:
+        # 5) ko, en 등 요청 언어가 없을 때 사용 가능한 언어로 재시도
         try:
-            generated = yt_api.list_transcripts(video_id)\
-                            .find_generated_transcript(languages)\
-                            .fetch()
-            return generated.to_raw_data()
-        except Exception as fallback_error:
-            raise ConnectionError(
-                f"대본 추출 실패: {primary_error} → {fallback_error}"
-            ) from fallback_error
-
+            transcript_list = yt_api.list_transcripts(video_id)
+            available_langs = [t.language_code for t in transcript_list]
+            if not available_langs:
+                raise ConnectionError("대본 추출 실패: 사용 가능한 언어 없음")
+            return yt_api.fetch(video_id=video_id, languages=available_langs).to_raw_data()
+        except Exception as e2:
+            raise ConnectionError(f"대본 추출 실패: {e2}") from e2
 
 
 # LangChain 요약 함수 (Google GenAI 사용)
@@ -134,7 +176,9 @@ def summarize_text(text):
 
 ### 2. 시각적 요소
 - 각 섹션/항목에 어울리는 이모지 활용
-- 복잡한 관계나 흐름은 mermaid, ASCII 등으로 시각화(필요시)
+- 필요 시 간단한 흐름도(flowchart) 형태의 Mermaid 다이어그램을 Notion 호환 기본 문법으로 삽입
+- Mermaid 코드 블록은 반드시 세 개의 backtick과 `mermaid` 키워드로 감싸기
+- 복잡한 문법은 사용하지 않고, 기본 형태로 제작
 - 표, 순서도, 타임라인 등 Markdown 지원 요소 적극 사용
 
 ### 3. 서술 스타일
@@ -192,7 +236,7 @@ def init_session():
         "summarize_clicked": False,
         "summarizing": False,
         "summarized": False,
-        "auto_save_to_notion": False,
+        "auto_save_to_notion": True,  # 자동 저장 기본값 True
         "notion_saved": False,
     }
     for k, v in default_values.items():
@@ -212,7 +256,6 @@ def load_video(url):
 
     # 영상 ID가 바뀐 경우에만 업데이트
     if st.session_state.video_id != vid:
-        # txt, data = get_transcript(vid,'agfacohl','422jprho3c0v')
         data = get_transcript(vid)
         txt = " ".join([seg.get("text", "") for seg in data])
 
@@ -240,10 +283,11 @@ def run_summary():
         st.session_state.summarize_clicked = True
 
         # ✅ 자동 저장이 켜져 있으면 바로 Notion 저장
-        if st.session_state.get("auto_save_to_notion") and not st.session_state.get("notion_saved", False):
+        if st.session_state.get("auto_save_to_notion") and not st.session_state.get(
+            "notion_saved", False
+        ):
             save_to_notion_as_page(st.session_state.summary)
             st.session_state["notion_saved"] = True
-
 
 
 def render_summary():
@@ -275,8 +319,6 @@ def render_summary():
     )
 
 
-
-
 def markdown_to_notion_blocks(markdown: str):
     """
     Markdown 텍스트를 Notion 블록으로 변환합니다.
@@ -286,7 +328,6 @@ def markdown_to_notion_blocks(markdown: str):
     blocks = []
     lines = markdown.splitlines()
 
-    in_mermaid = False
     in_code_block = False
     code_lang = ""
     code_lines = []
@@ -295,28 +336,32 @@ def markdown_to_notion_blocks(markdown: str):
         """굵은 글씨와 기울임을 Notion rich_text 형식으로 변환"""
         segments = []
         while text:
-            bold = re.search(r'\*\*(.*?)\*\*', text)
-            italic = re.search(r'_(.*?)_', text)
+            bold = re.search(r"\*\*(.*?)\*\*", text)
+            italic = re.search(r"_(.*?)_", text)
             if bold and (not italic or bold.start() < italic.start()):
-                before = text[:bold.start()]
+                before = text[: bold.start()]
                 if before:
                     segments.append({"type": "text", "text": {"content": before}})
-                segments.append({
-                    "type": "text",
-                    "text": {"content": bold.group(1)},
-                    "annotations": {"bold": True}
-                })
-                text = text[bold.end():]
+                segments.append(
+                    {
+                        "type": "text",
+                        "text": {"content": bold.group(1)},
+                        "annotations": {"bold": True},
+                    }
+                )
+                text = text[bold.end() :]
             elif italic:
-                before = text[:italic.start()]
+                before = text[: italic.start()]
                 if before:
                     segments.append({"type": "text", "text": {"content": before}})
-                segments.append({
-                    "type": "text",
-                    "text": {"content": italic.group(1)},
-                    "annotations": {"italic": True}
-                })
-                text = text[italic.end():]
+                segments.append(
+                    {
+                        "type": "text",
+                        "text": {"content": italic.group(1)},
+                        "annotations": {"italic": True},
+                    }
+                )
+                text = text[italic.end() :]
             else:
                 segments.append({"type": "text", "text": {"content": text}})
                 break
@@ -325,15 +370,6 @@ def markdown_to_notion_blocks(markdown: str):
     for line in lines:
         line = line.strip()
 
-        if line.startswith("```mermaid"):
-            in_mermaid = True
-            continue
-        elif line.startswith("```") and in_mermaid:
-            in_mermaid = False
-            continue
-        elif in_mermaid:
-            continue  # 노션에는 mermaid를 저장하지 않음
-
         if line.startswith("```"):
             if not in_code_block:
                 in_code_block = True
@@ -341,113 +377,112 @@ def markdown_to_notion_blocks(markdown: str):
                 code_lines = []
             else:
                 # 종료 시점
-                blocks.append({
-                    "object": "block",
-                    "type": "code",
-                    "code": {
-                        "language": code_lang or "plain text",
-                        "rich_text": [{
-                            "type": "text",
-                            "text": {"content": "\n".join(code_lines)}
-                        }]
+                blocks.append(
+                    {
+                        "object": "block",
+                        "type": "code",
+                        "code": {
+                            "language": code_lang or "plain text",
+                            "rich_text": [
+                                {"type": "text", "text": {"content": "\n".join(code_lines)}}
+                            ],
+                        },
                     }
-                })
+                )
                 in_code_block = False
         elif in_code_block:
             code_lines.append(line)
         elif line.startswith("# "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_1",
-                "heading_1": {
-                    "rich_text": convert_text_to_rich(line[2:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_1",
+                    "heading_1": {"rich_text": convert_text_to_rich(line[2:])},
                 }
-            })
+            )
         elif line.startswith("## "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_2",
-                "heading_2": {
-                    "rich_text": convert_text_to_rich(line[3:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_2",
+                    "heading_2": {"rich_text": convert_text_to_rich(line[3:])},
                 }
-            })
+            )
         elif line.startswith("### "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_3",
-                "heading_3": {
-                    "rich_text": convert_text_to_rich(line[4:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {"rich_text": convert_text_to_rich(line[4:])},
                 }
-            })
+            )
         elif line.startswith("- "):
-            blocks.append({
-                "object": "block",
-                "type": "bulleted_list_item",
-                "bulleted_list_item": {
-                    "rich_text": convert_text_to_rich(line[2:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {"rich_text": convert_text_to_rich(line[2:])},
                 }
-            })
+            )
         elif line:
-            blocks.append({
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": convert_text_to_rich(line)
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": convert_text_to_rich(line)},
                 }
-            })
+            )
 
     return blocks
-
 
 
 def save_to_notion_as_page(summary: str):
     """
     Save the summary as a new page in Notion with proper formatting.
     """
-    notion_token = os.getenv("NOTION_API_TOKEN")
-    parent_database_id = os.getenv("NOTION_DATABASE_ID")
 
-    if not notion_token:
-        st.error("Notion API token is not set.")
-        return
+    token = st.session_state.notion_token
+    database_id = st.session_state.notion_db_id
+    if not token or not database_id:
+        st.error("Notion 설정이 완료되지 않았습니다.")
+        return False
 
-    notion = Client(auth=notion_token)
+    parent_database_id = database_id
+    notion = Client(auth=token)
 
     try:
         # Split the summary into title and content
         lines = summary.strip().split("\n", 1)
-        title = lines[0][2:] if lines and lines[0].startswith("# ") else lines[0]  # Remove leading '# '
+        title = (
+            lines[0][2:] if lines and lines[0].startswith("# ") else lines[0]
+        )  # Remove leading '# '
         content = lines[1] if len(lines) > 1 else ""
 
         # Convert content to Notion blocks
         blocks = markdown_to_notion_blocks(content)
-        blocks.append({
-            "object": "block",
-            "type": "divider",
-            "divider": {}
-        })
+        blocks.append({"object": "block", "type": "divider", "divider": {}})
 
         # 2. 제목: 원본 대본
-        blocks.append({
-            "object": "block",
-            "type": "heading_2",
-            "heading_2": {
-                "rich_text": [{"type": "text", "text": {"content": "📜 대본"}}]
+        blocks.append(
+            {
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {"rich_text": [{"type": "text", "text": {"content": "📜 대본"}}]},
             }
-        })
+        )
 
         # 3. 본문: 대본 텍스트를 적절히 나눠서 블록으로 추가 (2000자 제한 회피)
         transcript_text = st.session_state.get("transcript_text", "")
         wrapped_segments = wrap(transcript_text, width=1800)
 
         for segment in wrapped_segments:
-            blocks.append({
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"type": "text", "text": {"content": segment}}]
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [{"type": "text", "text": {"content": segment}}]},
                 }
-            })
+            )
 
         # Create a new page in Notion
         yt_url = st.session_state.get("yt_url", "")
@@ -462,16 +497,8 @@ def save_to_notion_as_page(summary: str):
 
         notion.pages.create(
             parent={"type": "database_id", "database_id": parent_database_id},
-            cover={
-                "type": "external",
-                "external": {
-                    "url": thumbnail_url or ""
-                }
-            },
-            icon={
-                "type": "emoji",
-                "emoji": "🧠"
-            },
+            cover={"type": "external", "external": {"url": thumbnail_url or ""}},
+            icon={"type": "emoji", "emoji": "🧠"},
             properties={
                 "title": [
                     {
@@ -486,7 +513,6 @@ def save_to_notion_as_page(summary: str):
         st.success("Summary has been saved as a new page in Notion!")
     except Exception as e:
         st.error(f"Error saving to Notion: {e}")
-
 
 
 # === 메인 앱 ===
@@ -505,20 +531,43 @@ if yt_url:
 
 # === Notion 설정 입력 ===
 with st.expander("⚙️ Notion 설정 입력", expanded=False):
-    user_token = st.text_input("🔑 Notion API Token", type="password", placeholder="secret_...")
-    user_database_url = st.text_input("📄 Notion Database URL", placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+    # key 없이 반환값만 로컬 변수로 받으면 session_state가 즉시 바뀌지 않음
+    input_token = st.text_input(
+        "🔑 Notion API Token",
+        type="password",
+        value=st.session_state.notion_token,
+        placeholder="ntn_...",
+    )
+    input_db = st.text_input(
+        "📄 Notion Database URL OR ID",
+        value=st.session_state.notion_db_id,
+        placeholder="URL 또는 32자리 ID",
+    )
 
     if st.button("✅ OK - 설정 저장"):
-        if user_token and user_database_url:
-            set_env_variable("NOTION_API_TOKEN", user_token)
-            set_env_variable("NOTION_DATABASE_ID", extract_notion_database_id(user_database_url))
-            st.success("✅ 환경변수 저장 완료! Notion 저장 기능에 바로 적용됩니다.")
-        else:
+        token = input_token.strip()
+        db_input = input_db.strip()
+
+        if not token or not db_input:
             st.warning("⚠️ 모든 필드를 입력해야 합니다.")
+        elif not re.match(r"^(ntn_|secret_)[A-Za-z0-9]+$", token):
+            st.error("🔑 Token은 ‘ntn_’ 또는 ‘secret_’으로 시작해야 합니다.")
+        else:
+            notion_db_id = extract_notion_database_id(db_input)
+            if not notion_db_id:
+                st.error("📄 DB URL/ID 형식이 올바르지 않습니다.")
+            else:
+                st.session_state.notion_token = token
+                st.session_state.notion_db_id = notion_db_id
+                localS.setItem("notion_token", token, key="set_notion_token")
+                localS.setItem("notion_db_id", notion_db_id, key="set_notion_db_id")
+                st.success("✅ Notion 설정이 저장되었습니다.")
 
 # === 자동 저장 토글(실시간 반영) ===
 st.session_state.auto_save_to_notion = st.checkbox(
-    "✅ 요약 후 자동 Notion 저장", value=st.session_state.get("auto_save_to_notion", False), key="auto_save_toggle"
+    "✅ 요약 후 자동 Notion 저장",
+    value=st.session_state.get("auto_save_to_notion", False),
+    key="auto_save_toggle",
 )
 
 # === 요약 및 대본 표시 ===
@@ -536,14 +585,16 @@ if st.session_state.transcript_data:
 
     if st.session_state.get("summary"):
         # 자동 저장 토글이 켜져 있으면 요약 생성 후 바로 저장
-        if st.session_state.get("auto_save_to_notion") and not st.session_state.get("notion_saved", False):
+        if st.session_state.get("auto_save_to_notion") and not st.session_state.get(
+            "notion_saved",
+            False,
+        ):
             save_to_notion_as_page(st.session_state["summary"])
             st.session_state["notion_saved"] = True
         elif not st.session_state.get("auto_save_to_notion"):
             if st.button("Save to Notion as Page"):
                 save_to_notion_as_page(st.session_state["summary"])
                 st.session_state["notion_saved"] = True
-
 
     with col2:
         st.subheader("원본 대본")
@@ -555,4 +606,3 @@ if st.session_state.transcript_data:
                     m, s = divmod(int(e.get("start", 0)), 60)
                     rows.append({"시간": f"{m:02d}:{s:02d}", "텍스트": e.get("text", "")})
                 st.dataframe(rows, height=200)
-
