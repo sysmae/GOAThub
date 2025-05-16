@@ -95,3 +95,23 @@ git push origin feature/기능명
 - 이슈 등록 및 해결
 - 기능 개발 후 PR 요청
 - 코드 리뷰 후 머지
+
+
+## Deovops 로그
+1. docs/infra - 인프라 관련 설정 로그
+- [AWS 인스턴스 생성](docs/infra/01_aws_instance_create.md)
+- [Docker 설치 로그](docs/infra/02_docker_install_log.md)
+- [Docker Compose 설치](docs/infra/03_docker_compose_install.md)
+- [도메인 매핑 설정](docs/infra/04_domain_config.md)
+
+
+2. docs/reference - 팀원 참조 가이드드
+- [Docker 설치가이드 (팀원용)](docs/reference/01_Docker_install_guide.md)
+- [Docker Concept (팀원용)](docs/reference/02_Docker_Concept)
+- [Docker Instruction (팀원용)](docs/reference/03_Dockere_Instruction)
+
+
+3. docs/security - 보안정책 문서
+- [보안 그룹 인바운드 규칙](docs/security/01_Infra_log.md)
+
+4. docs/test - 테스팅관련 문서
