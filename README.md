@@ -81,11 +81,32 @@ git push origin feature/기능명
 
 ## 실행법
 
-1. **실행 명렁어**
+1. **필수 API 키 설정**
+
+   이 프로젝트는 외부 API 키를 필요로 합니다. 필요한 API 키는 다음과 같습니다.
+
+   - `GOOGLE_API_KEY`
+   - `WEBSHARE` 프록시 (선택사항)
+   - `Notion_API_KEY`
+
+   실행 전에 `app.py` 파일이 존재하는 디렉터리에 `.env` 파일을 생성하고 아래 키들을 설정하세요.
+
+   `.env.example` 파일을 참고해 `.env` 파일을 작성하세요.
+
+   - `GOOGLE_API_KEY`: Google Generative AI (Gemini) 사용을 위한 API 키 (https://makersuite.google.com/)
+   - `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD`: 유튜브 대본 추출을 위한 Webshare 프록시 (https://www.webshare.io/)
+   - `WEBSHARE_PROXY_PORT`: 기본값은 `80` 또는 `3128` (선택사항)
+
+   - **Notion API Token과 DB ID는 앱 실행 후 UI에서 직접 입력합니다.**
+
+2. **실행 명렁어**
+
    streamlit run src/app.py
 
-2. **도커 활용**
+3. **도커 활용**
+
    docker build -t goathub-app .
+
    docker run -p 8501:8501 --env-file .env goathub-app
 
 ---
@@ -96,22 +117,23 @@ git push origin feature/기능명
 - 기능 개발 후 PR 요청
 - 코드 리뷰 후 머지
 
-
 ## Deovops 로그
+
 1. docs/infra - 인프라 관련 설정 로그
+
 - [AWS 인스턴스 생성](docs/infra/01_aws_instance_create.md)
 - [Docker 설치 로그](docs/infra/02_docker_install_log.md)
 - [Docker Compose 설치](docs/infra/03_docker_compose_install.md)
 - [도메인 매핑 설정](docs/infra/04_domain_config.md)
 
-
 2. docs/reference - 팀원 참조 가이드드
+
 - [Docker 설치가이드 (팀원용)](docs/reference/01_Docker_install_guide.md)
 - [Docker Concept (팀원용)](docs/reference/02_Docker_Concept)
 - [Docker Instruction (팀원용)](docs/reference/03_Dockere_Instruction)
 
-
 3. docs/security - 보안정책 문서
+
 - [보안 그룹 인바운드 규칙](docs/security/01_Infra_log.md)
 
 4. docs/test - 테스팅관련 문서
