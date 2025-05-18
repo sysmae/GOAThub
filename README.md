@@ -85,6 +85,8 @@ git push origin feature/기능명
 
    이 프로젝트는 외부 API 키를 필요로 합니다. 필요한 API 키는 다음과 같습니다.
 
+   API 키 발급 방법은 [API 키 발급 방법](how_to_get_API_keys.md) 문서를 참고해주세요.
+
    - `GOOGLE_API_KEY`
    - `WEBSHARE` 프록시 (선택사항)
    - `Notion_API_KEY`
