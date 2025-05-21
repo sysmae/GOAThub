@@ -96,7 +96,6 @@ git push origin feature/기능명
 - 기능 개발 후 PR 요청
 - 코드 리뷰 후 머지
 
-
 ## Deovops 로그
 1. doc/infra - 인프라 관련 설정 로그
 - [AWS 인스턴스 생성](doc/infra/01_aws_instance_create.md)
