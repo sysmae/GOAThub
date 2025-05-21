@@ -1,0 +1,32 @@
+name: EC2 Test Log Writer
+
+# git push origin main 또는 PR merge로 main에 반영될 때 실행
+on:
+  push:
+    branches:
+      - main
+
+# github 클라우드 ubuntu 내에서 작업실행
+jobs:
+  write_log:
+    runs-on: ubuntu-latest
+
+# github 클라우드 ubuntu 내에서 작업을 수행하는 부분
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          # SSH 비밀키를 id_rsa 파일에 저장
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # EC2 호스트의 SSH fingerprint를 등록해 보안경고 방지지
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+# 실제 EC2에 접속하여 작업을 수행하는 부분
+# 'EOF'...EOF 사이에 있는 내용은 SSH 세션에서 실행
+      - name: SSH into EC2 and write log
+        run: |
+        # 비밀키로 EC2 접속
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            mkdir -p /home/ubuntu/goathub/test_workflow
+            echo "정상동작확인 - $(date '+%Y-%m-%d %H:%M:%S')" > /home/ubuntu/goathub/test_workflow/test.log
+          EOF
