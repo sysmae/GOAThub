@@ -1,12 +1,10 @@
 02_docker_install_log.md
+
 > **❗ 이 문서는 DevOps 담당자 또는 인프라 관리자 참고용입니다.**
-> 
-> 
+>
 > **팀원은 직접 수행할 필요 없습니다.**
-> 
 
 > 이 문서는 오픈소스 프로젝트 실습 중 AWS EC2 인스턴스(Ubuntu 22.04)에 Docker 설치 및 기본 테스트를 진행한 기록이며 https://docs.docker.com/engine/install/ubuntu/ 를 참조하였습니다.
-> 
 
 ---
 
@@ -70,4 +68,5 @@ sudo docker run hello-world
 ---
 
 ## 작성자: 김세찬 (DevOps 담당)
+
 작성일: 2025-05-06

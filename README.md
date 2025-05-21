@@ -105,7 +105,7 @@ git push origin feature/기능명
 - [Docker Compose 설치](docs/infra/03_docker_compose_install.md)
 - [도메인 매핑 설정](docs/infra/04_domain_config.md)
 
-2. docs/reference - 팀원 참조 가이드드
+2. docs/reference - 팀원 참조 가이드
 
 - [Docker 설치가이드 (팀원용)](docs/reference/01_Docker_install_guide.md)
 - [Docker Concept (팀원용)](docs/reference/02_Docker_Concept)
