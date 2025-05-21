@@ -19,8 +19,6 @@ from youtube_utils import extract_video_id, get_transcript
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
 
-# 환경 변수 및 세션 초기화
-load_dotenv_and_session(localS)
 init_session()
 
 
