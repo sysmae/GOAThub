@@ -433,21 +433,32 @@ def save_to_notion_as_page(summary: str):
 
         # 🔗 YouTube 링크 블록을 제일 위에 추가
         if yt_url:
+
+            # 🔗 설명용 링크 텍스트 (그대로 유지할 수 있음)
             blocks.append({
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": "🔗 영상 링크",
-                                "link": {"url": yt_url}
-                            }
-                        }
-                    ]
+    "object": "block",
+    "type": "paragraph",
+    "paragraph": {
+        "rich_text": [
+            {
+                "type": "text",
+                "text": {
+                    "content": "🔗 영상 링크",
+                    "link": {"url": yt_url}
                 }
-            })
+            }
+        ]
+    }
+})
+
+# 🎥 실제 임베드 처리되는 embed 블록
+            blocks.append({
+    "object": "block",
+    "type": "embed",
+    "embed": {
+        "url": yt_url
+    }
+})
 
         # 📑 요약 마크다운을 블록으로 변환
         blocks += markdown_to_notion_blocks(summary)
