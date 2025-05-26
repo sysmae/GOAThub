@@ -23,6 +23,7 @@ if "notion_token" not in st.session_state:
 if "notion_db_id" not in st.session_state:
     st.session_state["notion_db_id"] = localS.getItem("notion_db_id") or ""
 init_session()
+load_dotenv_and_session(localS)
 
 
 # === 영상 로딩 및 대본 추출 ===
