@@ -9,11 +9,12 @@ from config import (
     init_session,
     load_dotenv_and_session,
 )
+from constant import LANG_OPTIONS
 from notion_utils import (
     extract_notion_database_id,
     save_to_notion_as_page,
 )
-from summarizer import summarize_text
+from summarizer import summarize
 from youtube_utils import extract_video_id, get_transcript
 
 # LocalStorage 인스턴스 생성
@@ -62,7 +63,9 @@ def load_video(url):
 # === 요약 실행 ===
 def run_summary():
     with st.spinner("요약 생성 중…"):
-        st.session_state.summary = summarize_text(st.session_state.transcript_text)
+        # st.session_state.summary = summarize_text(st.session_state.transcript_text)
+        st.session_state.summary = summarize(st.session_state.transcript_text)
+
         st.session_state.summarize_clicked = True
 
         # ✅ 자동 저장이 켜져 있으면 바로 Notion 저장
@@ -105,6 +108,32 @@ def render_summary():
 # === 메인 앱 ===
 st.set_page_config(layout="wide", page_title="유튜브 대본 요약 서비스")
 st.title("유튜브 대본 요약 서비스")
+
+# 사이드바 설정
+with st.sidebar:
+    st.subheader("⚙️ 설정 패널")
+    # LocalStorage에서 언어 값 불러오기
+    if "selected_lang" not in st.session_state or not st.session_state.selected_lang:
+        stored_lang = localS.getItem("selected_lang")
+        if stored_lang:
+            st.session_state.selected_lang = stored_lang
+
+    default_lang_display = None
+    if "selected_lang" in st.session_state and st.session_state.selected_lang:
+        for k, v in LANG_OPTIONS.items():
+            if v == st.session_state.selected_lang:
+                default_lang_display = k
+                break
+    selected_lang_display = st.selectbox(
+        "요약 언어 선택:",
+        options=list(LANG_OPTIONS.keys()),
+        index=list(LANG_OPTIONS.keys()).index(default_lang_display) if default_lang_display else 0,
+        format_func=lambda x: x.split(" ")[1],
+    )
+    # 실제 언어 코드로 세션 상태에 저장 및 LocalStorage에도 저장
+    st.session_state.selected_lang = LANG_OPTIONS[selected_lang_display]
+    localS.setItem("selected_lang", st.session_state.selected_lang, key="set_selected_lang")
+
 
 yt_url = st.text_input("유튜브 링크 입력", placeholder="https://www.youtube.com/watch?v=...")
 if yt_url:
