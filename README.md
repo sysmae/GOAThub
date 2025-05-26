@@ -133,4 +133,3 @@ git push origin feature/기능명
 
 - [youtube_api접속불가 문재해결03](doc/troubleshooting/01-3_youtubeapi_trouble_deburgging.md)
 - 문제 원인 분석을 위해 EC2 내부에 별도 Squid 서버 구성 후 단계별 네트워크 흐름 점검. 통신 경로, 프록시 동작, 방화벽 원인 디버깅.
-
