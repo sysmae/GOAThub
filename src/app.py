@@ -18,7 +18,10 @@ from youtube_utils import extract_video_id, get_transcript
 
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
-
+if "notion_token" not in st.session_state:
+    st.session_state["notion_token"] = localS.getItem("notion_token") or ""
+if "notion_db_id" not in st.session_state:
+    st.session_state["notion_db_id"] = localS.getItem("notion_db_id") or ""
 init_session()
 
 
