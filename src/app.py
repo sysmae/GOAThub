@@ -415,13 +415,12 @@ def save_to_notion_as_page(summary: str):
     notion = Client(auth=notion_token)
 
     try:
-        # Use the YouTube video title as the Notion page title
+        # YouTube 링크와 제목 정보 수집
         yt_url = st.session_state.get("yt_url", "")
-        video_title = "Untitled Video"  # Default title if extraction fails
+        video_title = "Untitled Video"
         if yt_url:
             video_id = extract_video_id(yt_url)
             if video_id:
-                # Fetch video title by scraping the YouTube page
                 response = requests.get(yt_url)
                 if response.status_code == 200:
                     soup = BeautifulSoup(response.text, 'html.parser')
@@ -429,15 +428,39 @@ def save_to_notion_as_page(summary: str):
                     if title_tag:
                         video_title = title_tag.text.replace(" - YouTube", "").strip()
 
-        # Convert summary content to Notion blocks
-        blocks = markdown_to_notion_blocks(summary)
+        # ✅ 블록 생성 시작
+        blocks = []
+
+        # 🔗 YouTube 링크 블록을 제일 위에 추가
+        if yt_url:
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": "🔗 영상 링크",
+                                "link": {"url": yt_url}
+                            }
+                        }
+                    ]
+                }
+            })
+
+        # 📑 요약 마크다운을 블록으로 변환
+        blocks += markdown_to_notion_blocks(summary)
+
+        # ───────────────
+        # 📎 구분선 추가
         blocks.append({
             "object": "block",
             "type": "divider",
             "divider": {}
         })
 
-        # 2. 제목: 원본 대본
+        # 📜 대본 제목 블록 추가
         blocks.append({
             "object": "block",
             "type": "heading_2",
@@ -446,10 +469,9 @@ def save_to_notion_as_page(summary: str):
             }
         })
 
-        # 3. 본문: 대본 텍스트를 적절히 나눠서 블록으로 추가 (2000자 제한 회피)
+        # 📃 대본 본문 블록 추가
         transcript_text = st.session_state.get("transcript_text", "")
         wrapped_segments = wrap(transcript_text, width=1800)
-
         for segment in wrapped_segments:
             blocks.append({
                 "object": "block",
@@ -459,16 +481,11 @@ def save_to_notion_as_page(summary: str):
                 }
             })
 
-        # Create a new page in Notion
-        thumbnail_url = ""
-        if yt_url:
-            if video_id:
-                thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-
-        # 썸네일이 없을 경우 기본 이미지로 대체 (Notion이 허용하는 외부 이미지 URL 필요)
+        # 🖼 커버 이미지 (썸네일) 지정
+        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if yt_url else ""
         thumbnail_url = thumbnail_url or "https://via.placeholder.com/800x400?text=No+Thumbnail"
 
-        # Create the initial page with the first chunk of blocks
+        # ✅ 페이지 생성 (제목 속성은 'title'로 가정)
         chunk_size = 100
         first_chunk = blocks[:chunk_size]
         remaining_blocks = blocks[chunk_size:]
@@ -478,7 +495,7 @@ def save_to_notion_as_page(summary: str):
             cover={
                 "type": "external",
                 "external": {
-                    "url": thumbnail_url or ""
+                    "url": thumbnail_url
                 }
             },
             icon={
@@ -493,10 +510,10 @@ def save_to_notion_as_page(summary: str):
                     }
                 ]
             },
-            children=first_chunk,  # 첫 번째 블록 청크
+            children=first_chunk,
         )
 
-        # Append remaining blocks in chunks of 100
+        # ⬇ 나머지 블록 추가 (100개씩)
         while remaining_blocks:
             chunk = remaining_blocks[:chunk_size]
             remaining_blocks = remaining_blocks[chunk_size:]
@@ -505,9 +522,10 @@ def save_to_notion_as_page(summary: str):
                 children=chunk
             )
 
-        st.success("Summary has been saved as a new page in Notion!")
+        st.success("✅ 요약이 Notion에 성공적으로 저장되었습니다!")
+
     except Exception as e:
-        st.error(f"Error saving to Notion: {e}")
+        st.error(f"❌ Error saving to Notion: {e}")
 
 
 
