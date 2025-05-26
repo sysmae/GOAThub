@@ -155,9 +155,10 @@ def save_to_notion_as_page(summary: str):
         video_title = "Untitled Video"
         video_id = ""
         if yt_url:
-            from youtube_utils import extract_video_id
             import requests
             from bs4 import BeautifulSoup
+
+            from youtube_utils import extract_video_id
 
             video_id = extract_video_id(yt_url)
             if video_id:
