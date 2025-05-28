@@ -1,0 +1,51 @@
+name: Build and Deploy to EC2
+
+# main 브랜치에 push될 때 실행됨
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest  # GitHub Actions에서 실행되는 가상머신(Runner)으로 Ubuntu 환경에서 실행되며 임시가상클라우드를 제공, docker build, push 등 가능
+
+    steps:
+      # 1.현재 레포지토리 소스를 체크아웃
+      # github actions 워크플로우 실행 전 commit 기준 repository를 gitaction runner 가상임시서버에 임시저장
+      # Runner 가상머신 내 기본 작업디렉토리코드를 가져옴
+      # path를 통해 repository 내 특정디렉토리로 경로지정 가능능
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      # 2. Docker Buildx 설정 (도커 이미지의 효율적 생성을 위한 설정)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3. DockerHub 로그인
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWD }}" | docker login -u ${{ secrets.DOCKER_NAME }} --password-stdin
+
+      # 4. Docker 이미지 빌드 및 DockerHub에 push
+      - name: Build and push image
+        run: |
+          docker build -t sechankim/actiontest_01:latest .
+          docker push sechankim/actiontest_01:latest
+
+      # 5. SSH를 위해 개인키를 등록하고 EC2 호스트 키 저장
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 15.164.146.31 >> ~/.ssh/known_hosts
+
+      # 6. EC2에 접속하여 이미지 pull 및 컨테이너 재실행
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@15.164.146.31 "
+            docker rm -f streamlit-app || true
+            docker pull sechankim/actiontest_01:latest
+            docker run -d --name streamlit-app -p 127.0.0.1:8501:8501 sechankim/actiontest_01:latest
+            echo "$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S') - Build Triggered" >> build.log
+            "
