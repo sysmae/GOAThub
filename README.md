@@ -126,11 +126,10 @@ git push origin feature/기능명
 
 6. doc/troubleshooting - 문제해결관련 문서
 - [youtube_api접속불가 문재해결01](doc/troubleshooting/01-1_youtubeapi_trouble_forward_proxy_network_setting.md)
-## 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도한 기록. 네트워크 제한으로 인해 실패.
+- 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도한 기록. 네트워크 제한으로 인해 실패.
 
 - [youtube_api접속불가 문재해결02](doc/troubleshooting/01-2_youtubeapi_trouble_reverse_ssh_ternerling_network_setting.md)
-## EC2 → 로컬 PC 간 역방향 SSH 포워딩 터널 구성 실험. 로컬 프록시로 요청 우회 시도. SSH 연결은 성공했으나 라우터 차단으로 트래픽 전달 실패.
+- EC2 → 로컬 PC 간 역방향 SSH 포워딩 터널 구성 실험. 로컬 프록시로 요청 우회 시도. SSH 연결은 성공했으나 라우터 차단으로 트래픽 전달 실패.
 
 - [youtube_api접속불가 문재해결03](doc/troubleshooting/01-3_youtubeapi_trouble_deburgging.md)
-## 문제 원인 분석을 위해 EC2 내부에 별도 Squid 서버 구성 후 단계별 네트워크 흐름 점검. 통신 경로, 프록시 동작, 방화벽 원인 디버깅.
-
+- 문제 원인 분석을 위해 EC2 내부에 별도 Squid 서버 구성 후 단계별 네트워크 흐름 점검. 통신 경로, 프록시 동작, 방화벽 원인 디버깅.
