@@ -2,3 +2,5 @@
 venv
 .venv
 src/__pycache__
+certbot-etc
+.private
