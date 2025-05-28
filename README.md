@@ -106,6 +106,7 @@ git push origin feature/기능명
 - [Nginx 리버스프록시 설정](doc/infra/06_nginx_reverse_proxy.md)
 - [docker-compose.yml 설정](doc/infra/07_docker_compose.md)
 - [https_cerbot 설정](doc/infra/08_https_certbot.md)
+- [https_cron 설정](doc/infra/09_https_cron.md)
 
 2. doc/reference - 팀원 참조 가이드
 - [Docker 설치가이드 (팀원용)](doc/reference/01_Docker_install_guide.md)
@@ -114,7 +115,22 @@ git push origin feature/기능명
 
 
 3. doc/security - 보안정책 문서
-- [보안 그룹 인바운드 규칙](doc/security/01_Infra_log.md)
+- [보안 그룹 인바운드 규칙](doc/01_security/01_Infra_log.md)
 
 4. doc/test - 테스팅관련 문서
 - [https_cerbot 설정](doc/test/01_Docker_container_running_cehck.md)
+
+5. doc/deploy - 배포포관련 문서
+- [github 활용 gitaction pipeline 구성](doc/deploy/01_deploy_with_githubactions.md)
+- [dockerhub 활용 gitaction pipeline 구성](doc/deploy/02_deploy_with_dockerhub.md)
+
+6. doc/troubleshooting - 문제해결관련 문서
+- [youtube_api접속불가 문재해결01](doc/troubleshooting/01-1_youtubeapi_trouble_forward_proxy_network_setting.md)
+## 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도한 기록. 네트워크 제한으로 인해 실패.
+
+- [youtube_api접속불가 문재해결02](doc/troubleshooting/01-2_youtubeapi_trouble_reverse_ssh_ternerling_network_setting.md)
+## EC2 → 로컬 PC 간 역방향 SSH 포워딩 터널 구성 실험. 로컬 프록시로 요청 우회 시도. SSH 연결은 성공했으나 라우터 차단으로 트래픽 전달 실패.
+
+- [youtube_api접속불가 문재해결03](doc/troubleshooting/01-3_youtubeapi_trouble_deburgging.md)
+## 문제 원인 분석을 위해 EC2 내부에 별도 Squid 서버 구성 후 단계별 네트워크 흐름 점검. 통신 경로, 프록시 동작, 방화벽 원인 디버깅.
+
