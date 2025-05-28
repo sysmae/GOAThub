@@ -1,9 +1,7 @@
 > ⭐**이 문서는 초기 개발환경통일화를 위한 Docker설치 가이드입니다.**
-> 
-> 
+>
 > **운영체제(OS)별 설치방법을 아래와 같이 안내하오니
 > 팀원분들은 아래 가이드에 따라 Docker를 설치하여주시기 바랍니다.**
-> 
 
 ---
 
@@ -29,9 +27,9 @@
 
 - `제어판 → 프로그램 → Windows 기능 켜기/끄기`
 - 아래 기능을 **모두 체크**:
-    - Hyper-V
-    - Virtual Machine Platform
-    - Windows Subsystem for Linux
+  - Hyper-V
+  - Virtual Machine Platform
+  - Windows Subsystem for Linux
 
 ---
 
@@ -46,7 +44,7 @@ wsl --install
 ```
 
 > 이 명령은 WSL 및 Ubuntu 기본 설치 + WSL2 설정을 자동으로 수행합니다.
-> 
+
 - 이미 WSL1이 설치된 경우에는 다음을 입력:
 
 ```powershell
@@ -88,9 +86,7 @@ dism.exe /online /enable-feature /featurename:Microsoft-Hyper-V-All /all /norest
 ### 5. Docker Desktop 설치
 
 - 공식 설치 링크:
-    
-    👉 https://docs.docker.com/desktop/install/windows-install/
-    
+  👉 https://docs.docker.com/desktop/install/windows-install/
 
 설치 시, **WSL2 백엔드 사용** 옵션 활성화 권장
 
@@ -113,9 +109,7 @@ docker run hello-worl
 ### 1. Docker Desktop 설치
 
 - 공식 설치 링크:
-    
-    👉 https://docs.docker.com/desktop/install/mac-install/
-    
+  👉 https://docs.docker.com/desktop/install/mac-install/
 
 설치 후, 권한 요청 및 시스템 확장 활성화 등의 절차를 따라 완료
 
@@ -139,4 +133,5 @@ docker run hello-world
 ---
 
 ## 작성자: 김세찬 (DevOps 담당)
+
 작성일: 2025-05-06

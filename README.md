@@ -81,34 +81,11 @@ git push origin feature/기능명
 
 ## 실행법
 
-1. **필수 API 키 설정**
-
-   이 프로젝트는 외부 API 키를 필요로 합니다. 필요한 API 키는 다음과 같습니다.
-
-   API 키 발급 방법은 [API 키 발급 방법](how_to_get_API_keys.md) 문서를 참고해주세요.
-
-   - `GOOGLE_API_KEY`
-   - `WEBSHARE` 프록시 (선택사항)
-   - `Notion_API_KEY`
-
-   실행 전에 `app.py` 파일이 존재하는 디렉터리에 `.env` 파일을 생성하고 아래 키들을 설정하세요.
-
-   `.env.example` 파일을 참고해 `.env` 파일을 작성하세요.
-
-   - `GOOGLE_API_KEY`: Google Generative AI (Gemini) 사용을 위한 API 키 (https://makersuite.google.com/)
-   - `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD`: 유튜브 대본 추출을 위한 Webshare 프록시 (https://www.webshare.io/)
-   - `WEBSHARE_PROXY_PORT`: 기본값은 `80` 또는 `3128` (선택사항)
-
-   - **Notion API Token과 DB ID는 앱 실행 후 UI에서 직접 입력합니다.**
-
-2. **실행 명렁어**
-
+1. **실행 명렁어**
    streamlit run src/app.py
 
-3. **도커 활용**
-
+2. **도커 활용**
    docker build -t goathub-app .
-
    docker run -p 8501:8501 --env-file .env goathub-app
 
 ---
@@ -120,22 +97,40 @@ git push origin feature/기능명
 - 코드 리뷰 후 머지
 
 ## Deovops 로그
+1. doc/infra - 인프라 관련 설정 로그
+- [AWS 인스턴스 생성](doc/infra/01_aws_instance_create.md)
+- [Docker 설치 로그](doc/infra/02_docker_install_log.md)
+- [Docker Compose 설치](doc/infra/03_docker_compose_install.md)
+- [도메인 매핑 설정](doc/infra/04_domain_config.md)
+- [Dockerfile 설정](doc/infra/05_Dockerfile.md)
+- [Nginx 리버스프록시 설정](doc/infra/06_nginx_reverse_proxy.md)
+- [docker-compose.yml 설정](doc/infra/07_docker_compose.md)
+- [https_cerbot 설정](doc/infra/08_https_certbot.md)
+- [https_cron 설정](doc/infra/09_https_cron.md)
 
-1. docs/infra - 인프라 관련 설정 로그
+2. doc/reference - 팀원 참조 가이드
+- [Docker 설치가이드 (팀원용)](doc/reference/01_Docker_install_guide.md)
+- [Docker Concept (팀원용)](doc/reference/02_Docker_Concept)
+- [Docker Instruction (팀원용)](doc/reference/03_Dockere_Instruction)
 
-- [AWS 인스턴스 생성](docs/infra/01_aws_instance_create.md)
-- [Docker 설치 로그](docs/infra/02_docker_install_log.md)
-- [Docker Compose 설치](docs/infra/03_docker_compose_install.md)
-- [도메인 매핑 설정](docs/infra/04_domain_config.md)
 
-2. docs/reference - 팀원 참조 가이드드
+3. doc/security - 보안정책 문서
+- [보안 그룹 인바운드 규칙](doc/01_security/01_Infra_log.md)
 
-- [Docker 설치가이드 (팀원용)](docs/reference/01_Docker_install_guide.md)
-- [Docker Concept (팀원용)](docs/reference/02_Docker_Concept)
-- [Docker Instruction (팀원용)](docs/reference/03_Dockere_Instruction)
+4. doc/test - 테스팅관련 문서
+- [https_cerbot 설정](doc/test/01_Docker_container_running_cehck.md)
 
-3. docs/security - 보안정책 문서
+5. doc/deploy - 배포포관련 문서
+- [github 활용 gitaction pipeline 구성](doc/deploy/01_deploy_with_githubactions.md)
+- [dockerhub 활용 gitaction pipeline 구성](doc/deploy/02_deploy_with_dockerhub.md)
 
-- [보안 그룹 인바운드 규칙](docs/security/01_Infra_log.md)
+6. doc/troubleshooting - 문제해결관련 문서
+- [youtube_api접속불가 문재해결01](doc/troubleshooting/01-1_youtubeapi_trouble_forward_proxy_network_setting.md)
+## 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도한 기록. 네트워크 제한으로 인해 실패.
 
-4. docs/test - 테스팅관련 문서
+- [youtube_api접속불가 문재해결02](doc/troubleshooting/01-2_youtubeapi_trouble_reverse_ssh_ternerling_network_setting.md)
+## EC2 → 로컬 PC 간 역방향 SSH 포워딩 터널 구성 실험. 로컬 프록시로 요청 우회 시도. SSH 연결은 성공했으나 라우터 차단으로 트래픽 전달 실패.
+
+- [youtube_api접속불가 문재해결03](doc/troubleshooting/01-3_youtubeapi_trouble_deburgging.md)
+## 문제 원인 분석을 위해 EC2 내부에 별도 Squid 서버 구성 후 단계별 네트워크 흐름 점검. 통신 경로, 프록시 동작, 방화벽 원인 디버깅.
+

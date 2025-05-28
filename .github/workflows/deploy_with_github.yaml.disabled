@@ -1,0 +1,54 @@
+name: Deploy to EC2
+
+# main 브랜치에 push시 동작
+on:
+  push:
+    branches:
+      - main
+
+#PR main에 merge시 동작작
+#on:
+#  pull_request:
+#    types:
+#      - closed
+#    branches:
+#      - main
+#
+jobs:
+  deploy:
+    #PR main에 merge시 동작 - closed는 merge rejected도 포함하므로 해당 옵션 추가가
+    # if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v3
+        
+        # github 제공 임시클라우드에 ssh private key를 임시저장 후 ec2접속에 사용용
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 15.164.146.31 >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+         # SSH session connection to the EC2 instance
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@15.164.146.31 "
+            if [ ! -d ~/actiontest_01 ]; then
+             # 기존 디렉토리 존재여부 확인 후 git clone
+              git clone https://github.com/tpcks75/actiontest_01.git ~/actiontest_01;
+            fi &&
+            cd ~/actiontest_01 &&
+             # 이미 디렉토리가 존재하는 경우 pull로 업데이트
+            git pull origin main &&
+             # 빌드 시각 기록
+            echo \"$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S') - Build Triggered\" >> build.log &&
+            # 강제로 이름 중복 컨테이너 제거
+            docker rm -f streamlit-app || true &&
+             #기존 동작중인 컨테이너 제거 및 새로 pull한 컨테이너로 재가동
+            docker-compose down &&
+            docker-compose up -d --build
+            "
+# 05.27 수정

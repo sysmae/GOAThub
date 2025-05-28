@@ -1,0 +1,28 @@
+# Python 관련
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.ipynb_checkpoints
+
+# 환경파일
+.env
+*.env
+
+# 패키징/배포 무관 파일
+.vscode/
+*.log
+
+
+# Git 관련
+.git/
+.gitignore
+
+
+# 문서 및 리포트
+docs/
+*.md
+
+#https권한오류
+certbot-etc/
