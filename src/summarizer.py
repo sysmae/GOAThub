@@ -2,8 +2,15 @@ import os
 
 import streamlit as st
 from langchain.chains.summarize import load_summarize_chain
+
+# from langchain.chat_models import ChatGoogleGenerativeAI
 from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from constant import LANG_OPTIONS
@@ -518,16 +525,60 @@ Un resumen en formato markdown:
 
 
 # 요약 엔진
-def summarize(text):
+# def summarize(text):
+#     google_api_key = os.getenv("GOOGLE_API_KEY")
+#     if not google_api_key:
+#         return "GOOGLE_API_KEY가 .env 파일에 없습니다."
+#     lang_code = st.session_state.get("selected_lang")
+#     llm = ChatGoogleGenerativeAI(
+#         model="gemini-2.0-flash", temperature=0, google_api_key=google_api_key
+#     )
+#     PROMPT = PromptTemplate(template=get_prompt(lang_code), input_variables=["text"])
+#     chain = load_summarize_chain(llm, chain_type="stuff", prompt=PROMPT, verbose=False)
+#     docs = [Document(page_content=text)]
+#     summary = chain.run(docs)
+#     return summary
+
+
+def summarize(text: str) -> str:
     google_api_key = os.getenv("GOOGLE_API_KEY")
     if not google_api_key:
         return "GOOGLE_API_KEY가 .env 파일에 없습니다."
+
     lang_code = st.session_state.get("selected_lang")
+
+    # 1) LLM 생성
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash", temperature=0, google_api_key=google_api_key
+        model="gemini-2.0-flash",
+        temperature=0,
+        google_api_key=google_api_key,
     )
-    PROMPT = PromptTemplate(template=get_prompt(lang_code), input_variables=["text"])
-    chain = load_summarize_chain(llm, chain_type="stuff", prompt=PROMPT, verbose=False)
+
+    # 2) 기존 프롬프트 유지
+    original_template = get_prompt(lang_code)  # 기존 get_prompt 함수에서 가져온 템플릿
+
+    # 3) 시스템 메시지: 마크다운 강제화
+    system_msg = """
+    You are a helpful assistant.
+    Always respond in valid Markdown format.
+    - Use headings (##, ###) and bullet points.
+    - Do not output plain text or HTML.
+    """
+
+    # 4) ChatPromptTemplate 구성
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(system_msg),
+            HumanMessagePromptTemplate.from_template(original_template),
+        ]
+    )
+
+    # 5) 요약 체인 실행
+    chain = load_summarize_chain(
+        llm=llm,
+        chain_type="stuff",
+        prompt=chat_prompt,
+        verbose=False,
+    )
     docs = [Document(page_content=text)]
-    summary = chain.run(docs)
-    return summary
+    return chain.run(docs)

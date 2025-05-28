@@ -63,7 +63,6 @@ def load_video(url):
 # === 요약 실행 ===
 def run_summary():
     with st.spinner("요약 생성 중…"):
-        # st.session_state.summary = summarize_text(st.session_state.transcript_text)
         st.session_state.summary = summarize(st.session_state.transcript_text)
 
         st.session_state.summarize_clicked = True

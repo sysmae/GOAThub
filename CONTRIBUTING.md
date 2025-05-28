@@ -187,7 +187,7 @@ git push origin --delete feature/new-feature
 ruff check .
 
 # 자동 수정 시도
-ruff check app/ --fix
+ruff check . --fix
 ```
 
 ### 2. 브랜치 충돌 해결
