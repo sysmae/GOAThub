@@ -52,13 +52,14 @@ def fetch_youtube_transcript_via_proxy(video_id: str, lang: str = "en") -> dict:
     """
     # 환경 변수에서 프록시 URL 읽기
     proxy_url = os.environ.get("WEBSHARE_PROXY_URL")
-    if not proxy_url:
-        return {"error": "WEBSHARE_PROXY_URL environment variable is not set"}
+    if proxy_url:
+        proxies = {
+            "http": proxy_url,
+            "https": proxy_url,
+        }
+    else:
+        proxies = None  # 프록시 없이 동작
 
-    proxies = {
-        "http": proxy_url,
-        "https": proxy_url,
-    }
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
     accept_language = "en-US,en;q=0.9"
 
@@ -66,19 +67,29 @@ def fetch_youtube_transcript_via_proxy(video_id: str, lang: str = "en") -> dict:
         return {"error": "videoId is required"}
 
     try:
-        # 1. 유튜브 HTML 페이지 가져오기
+        # 1. 유튜브 HTML 페이지 가져오기 (최대 3회 재시도)
         youtube_url = f"https://www.youtube.com/watch?v={video_id}"
-        html_res = requests.get(
-            youtube_url,
-            headers={
-                "User-Agent": user_agent,
-                "Accept-Language": accept_language,
-            },
-            proxies=proxies,
-            timeout=60,  # timeout 10 -> 60초로 증가
-        )
-        if not html_res.ok:
-            return {"error": f"Failed to fetch YouTube page: {html_res.status_code}"}
+        html_res = None
+        for attempt in range(3):
+            try:
+                html_res = requests.get(
+                    youtube_url,
+                    headers={
+                        "User-Agent": user_agent,
+                        "Accept-Language": accept_language,
+                    },
+                    proxies=proxies,
+                    timeout=60,
+                )
+                if html_res.ok:
+                    break
+            except Exception:
+                if attempt == 2:
+                    raise
+        if not html_res or not html_res.ok:
+            return {
+                "error": f"Failed to fetch YouTube page: {getattr(html_res, 'status_code', 'no response')}"
+            }
         html = html_res.text
 
         # 2. captionTracks JSON 추출
@@ -120,15 +131,28 @@ def fetch_youtube_transcript_via_proxy(video_id: str, lang: str = "en") -> dict:
             avail = [t.get("languageCode") for t in caption_tracks]
             return {"error": f"No transcript for {lang}. Available: {', '.join(avail)}"}
 
-        transcript_res = requests.get(
-            track["baseUrl"],
-            headers={
-                "User-Agent": user_agent,
-                "Accept-Language": accept_language,
-            },
-            proxies=proxies,
-            timeout=60,  # timeout 10 -> 60초로 증가
-        )
+        # 자막 데이터 요청 (최대 3회 재시도)
+        transcript_res = None
+        for attempt in range(3):
+            try:
+                transcript_res = requests.get(
+                    track["baseUrl"],
+                    headers={
+                        "User-Agent": user_agent,
+                        "Accept-Language": accept_language,
+                    },
+                    proxies=proxies,
+                    timeout=60,
+                )
+                if transcript_res.ok:
+                    break
+            except Exception:
+                if attempt == 2:
+                    raise
+        if not transcript_res or not transcript_res.ok:
+            return {
+                "error": f"Failed to fetch transcript data: {getattr(transcript_res, 'status_code', 'no response')}"
+            }
         content_type = transcript_res.headers.get("content-type", "")
         transcript = ""
         language_used = track.get("languageCode")
