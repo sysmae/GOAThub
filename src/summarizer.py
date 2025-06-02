@@ -541,6 +541,8 @@ Un resumen en formato markdown:
 
 
 def summarize(text: str) -> str:
+    import google.api_core.exceptions
+
     google_api_key = os.getenv("GOOGLE_API_KEY")
     if not google_api_key:
         return "GOOGLE_API_KEY가 .env 파일에 없습니다."
@@ -549,7 +551,7 @@ def summarize(text: str) -> str:
 
     # 1) LLM 생성
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-1.5-flash",
         temperature=0,
         google_api_key=google_api_key,
     )
@@ -573,7 +575,7 @@ def summarize(text: str) -> str:
         ]
     )
 
-    # 5) 요약 체인 실행
+    # 5) 요약 체인 실행 (예외 처리 추가)
     chain = load_summarize_chain(
         llm=llm,
         chain_type="stuff",
@@ -581,4 +583,22 @@ def summarize(text: str) -> str:
         verbose=False,
     )
     docs = [Document(page_content=text)]
-    return chain.run(docs)
+    try:
+        return chain.run(docs)
+    except google.api_core.exceptions.ResourceExhausted:
+        return (
+            "⚠️ Google Generative AI API 사용량이 초과되었습니다. "
+            "잠시 후 다시 시도하거나, API 할당량을 확인하세요."
+        )
+    except Exception as e:
+        return f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+
+
+# 사용할 수 있는 대표적인 Google Generative AI 모델 이름 예시:
+# - gemini-1.0-pro
+# - gemini-1.5-pro
+# - gemini-1.5-flash
+# - gemini-2.0-pro
+# - gemini-2.0-flash
+# 필요에 따라 아래와 같이 model 파라미터를 변경하세요.
+# 예시: model="gemini-1.5-pro"

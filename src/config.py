@@ -23,7 +23,6 @@ def init_session():
     default_values = {
         "video_id": "",
         "transcript_text": "",
-        "transcript_data": None,
         "summary": "",
         "summarize_clicked": False,
         "summarizing": False,
