@@ -15,7 +15,7 @@ from notion_utils import (
     save_to_notion_as_page,
 )
 from summarizer import summarize
-from youtube_utils import extract_video_id, get_transcript
+from youtube_utils import extract_video_id, fetch_youtube_transcript_via_proxy
 
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
@@ -37,18 +37,17 @@ def load_video(url):
     # 영상 ID가 바뀐 경우에만 업데이트
     if st.session_state.video_id != vid:
         try:
-            data = get_transcript(vid)
+            data = fetch_youtube_transcript_via_proxy(vid)
         except Exception as e:
             st.error(f"대본 추출 실패: {e}")
             return
-        txt = " ".join([seg.get("text", "") for seg in data])
+        txt = data.get("transcript", "")
 
-        if data:
+        if txt:
             st.session_state.update(
                 {
                     "video_id": vid,
                     "transcript_text": txt,
-                    "transcript_data": data,
                     "summary": "",
                     "summarize_clicked": False,
                     "summarizing": False,
@@ -57,7 +56,7 @@ def load_video(url):
                 }
             )
         else:
-            st.error("대본 추출 실패")
+            st.error(f"대본 추출 실패: {data.get('error', '')}")
 
 
 # === 요약 실행 ===
@@ -186,7 +185,7 @@ st.session_state.auto_save_to_notion = st.checkbox(
 )
 
 # === 요약 및 대본 표시 ===
-if st.session_state.transcript_data:
+if st.session_state.get("transcript_text"):
     col1, col2 = st.columns([2, 1])
 
     with col1:
@@ -214,10 +213,3 @@ if st.session_state.transcript_data:
     with col2:
         st.subheader("원본 대본")
         st.text_area("", st.session_state.transcript_text, height=300)
-        if isinstance(st.session_state.transcript_data, list):
-            with st.expander("🕒 타임스탬프 포함 대본", expanded=False):
-                rows = []
-                for e in st.session_state.transcript_data:
-                    m, s = divmod(int(e.get("start", 0)), 60)
-                    rows.append({"시간": f"{m:02d}:{s:02d}", "텍스트": e.get("text", "")})
-                st.dataframe(rows, height=200)
