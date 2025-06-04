@@ -24,7 +24,7 @@ def extract_notion_database_id(notion_input: str) -> str:
 def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
     """
     Markdown 텍스트를 Notion 블록으로 변환합니다.
-    - 굵은 글씨, 기울임 적용
+    - heading, bold, italic, list, code 등 지원
     - Mermaid 블록은 Notion에 저장하지 않음
     - 너무 긴 줄은 max_length 단위로 분할하여 여러 블록으로 저장
     """
@@ -66,8 +66,9 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
         return segments
 
     def add_paragraph_block(text):
-        wrapped = wrap(text, max_length)
-        for segment in wrapped:
+        # 긴 줄은 max_length 단위로 분할
+        for i in range(0, len(text), max_length):
+            segment = text[i:i+max_length]
             blocks.append({
                 "object": "block",
                 "type": "paragraph",
@@ -76,20 +77,24 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
                 }
             })
 
-    for line in lines:
-        line = line.strip()
+    supported_code_langs = {
+        'abap','agda','arduino','ascii art','assembly','bash','basic','bnf','c','c#','c++','clojure','coffeescript','coq','css','dart','dhall','diff','docker','ebnf','elixir','elm','erlang','f#','flow','fortran','gherkin','glsl','go','graphql','groovy','haskell','hcl','html','idris','java','javascript','json','julia','kotlin','latex','less','lisp','livescript','llvm ir','lua','makefile','markdown','markup','matlab','mathematica','mermaid','nix','notion formula','objective-c','ocaml','pascal','perl','php','plain text','powershell','prolog','protobuf','purescript','python','r','racket','reason','ruby','rust','sass','scala','scheme','scss','shell','smalltalk','solidity','sql','swift','toml','typescript','vb.net','verilog','vhdl','visual basic','webassembly','xml','yaml','java/c/c++/c#','notionscript'
+    }
 
+    for raw_line in lines:
+        line = raw_line.strip()
         if line.startswith("```"):
             if not in_code_block:
                 in_code_block = True
-                code_lang = line[3:].strip()
+                code_lang = line[3:].strip().lower()
                 code_lines = []
             else:
+                notion_code_lang = code_lang if code_lang in supported_code_langs else "plain text"
                 blocks.append({
                     "object": "block",
                     "type": "code",
                     "code": {
-                        "language": code_lang or "plain text",
+                        "language": notion_code_lang,
                         "rich_text": [
                             {"type": "text", "text": {"content": "\n".join(code_lines)}}
                         ],
@@ -122,6 +127,30 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
                     "rich_text": convert_text_to_rich(line[4:])
                 }
             })
+        elif line.startswith("#### "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_3",
+                "heading_3": {
+                    "rich_text": convert_text_to_rich(line[5:])
+                }
+            })
+        elif line.startswith("##### "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_3",
+                "heading_3": {
+                    "rich_text": convert_text_to_rich(line[6:])
+                }
+            })
+        elif line.startswith("###### "):
+            blocks.append({
+                "object": "block",
+                "type": "heading_3",
+                "heading_3": {
+                    "rich_text": convert_text_to_rich(line[7:])
+                }
+            })
         elif line.startswith("- "):
             blocks.append({
                 "object": "block",
@@ -131,9 +160,13 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
                 }
             })
         elif line:
-            add_paragraph_block(line)  # 이 부분에서 긴 줄도 자동 분할
+            add_paragraph_block(line)
 
-    return blocks
+    # 잘못된 블록 제거
+    return [
+        b for b in blocks
+        if b and isinstance(b, dict) and b.get("object") == "block" and b.get("type") and len(b) > 2
+    ]
 
 
 def save_to_notion_as_page(summary: str):
@@ -155,19 +188,19 @@ def save_to_notion_as_page(summary: str):
         video_title = "Untitled Video"
         video_id = ""
         if yt_url:
-            import requests
-            from bs4 import BeautifulSoup
-
             from youtube_utils import extract_video_id
-
             video_id = extract_video_id(yt_url)
-            if video_id:
-                response = requests.get(yt_url)
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    title_tag = soup.find("title")
-                    if title_tag:
-                        video_title = title_tag.text.replace(" - YouTube", "").strip()
+            # oEmbed API로 YouTube 제목 가져오기
+            try:
+                import requests
+                clean_url = f"https://www.youtube.com/watch?v={video_id}"
+                oembed_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
+                resp = requests.get(oembed_url)
+                if resp.status_code == 200:
+                    json = resp.json()
+                    video_title = json.get("title", video_title)
+            except Exception:
+                pass
 
         blocks = []
 
@@ -215,13 +248,11 @@ def save_to_notion_as_page(summary: str):
         })
 
         transcript_text = st.session_state.get("transcript_text", "")
-        wrapped_segments = wrap(transcript_text, width=1800)
-
-        for segment in wrapped_segments:
+        for i in range(0, len(transcript_text), 1800):
             blocks.append({
                 "object": "block",
                 "type": "paragraph",
-                "paragraph": {"rich_text": [{"type": "text", "text": {"content": segment}}]}
+                "paragraph": {"rich_text": [{"type": "text", "text": {"content": transcript_text[i:i+1800]}}]}
             })
 
         thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else ""
