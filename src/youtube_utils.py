@@ -157,11 +157,11 @@ def fetch_youtube_transcript_via_proxy(video_id: str, lang: str = "en") -> dict:
         transcript_res = None
         successful_response = False
 
-        for attempt in range(4, 14):
+        for attempt in range(10):
             try:
                 # 지수 백오프 구현 (첫 번째 시도 제외)
-                if attempt > 4:
-                    delay = 2 ** (attempt - 4) # 4 부터 8초, 16초, 32초 등
+                if attempt > 0:
+                    delay = 2 ** (attempt) # 2초, 4초, 8초, 16초 등
                     logger.info(f"재시도 전 {delay}초 대기")
                     time.sleep(delay)
 
@@ -366,8 +366,7 @@ def setup_logger(level=logging.INFO):
     )
 
 # 사용 예시:
-# setup_logger(logging.DEBUG)  # 디버그 모드
-# result = fetch_youtube_transcript_via_proxy("VIDEO_ID", "ko")
+setup_logger(logging.DEBUG)  # 디버그 모드
 
 
 
