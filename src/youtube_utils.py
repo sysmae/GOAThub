@@ -366,8 +366,8 @@ def setup_logger(level=logging.INFO):
     )
 
 # 사용 예시:
-setup_logger(logging.DEBUG)  # 디버그 모드
-result = fetch_youtube_transcript_via_proxy("VIDEO_ID", "ko")
+# setup_logger(logging.DEBUG)  # 디버그 모드
+# result = fetch_youtube_transcript_via_proxy("VIDEO_ID", "ko")
 
 
 
