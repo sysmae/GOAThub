@@ -4,3 +4,4 @@ venv
 src/__pycache__
 certbot-etc
 .private
+youtube_transcript.log

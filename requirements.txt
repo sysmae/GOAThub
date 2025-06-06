@@ -8,4 +8,5 @@ langchain-google-genai>=0.6.15
 streamlit_mermaid >= 0.3.0
 notion-client>=2.3.0
 streamlit-local-storage>=0.0.25
-beautifulsoup4>=4.12.0
+langchain-openai>=0.3.18
+openai>=1.84.0

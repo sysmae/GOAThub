@@ -86,7 +86,7 @@ git push origin feature/기능명
 
 2. **도커 활용**
    docker build -t goathub-app .
-   docker run -p 8501:8501 --env-file .env goathub-app
+   docker run -p 8501:8501 --env-file src/.env goathub-app
 
 ---
 
@@ -97,7 +97,9 @@ git push origin feature/기능명
 - 코드 리뷰 후 머지
 
 ## Deovops 로그
+
 1. doc/infra - 인프라 관련 설정 로그
+
 - [AWS 인스턴스 생성](doc/infra/01_aws_instance_create.md)
 - [Docker 설치 로그](doc/infra/02_docker_install_log.md)
 - [Docker Compose 설치](doc/infra/03_docker_compose_install.md)
@@ -109,22 +111,26 @@ git push origin feature/기능명
 - [https_cron 설정](doc/infra/09_https_cron.md)
 
 2. doc/reference - 팀원 참조 가이드
+
 - [Docker 설치가이드 (팀원용)](doc/reference/01_Docker_install_guide.md)
 - [Docker Concept (팀원용)](doc/reference/02_Docker_Concept)
 - [Docker Instruction (팀원용)](doc/reference/03_Dockere_Instruction)
 
-
 3. doc/security - 보안정책 문서
+
 - [보안 그룹 인바운드 규칙](doc/01_security/01_Infra_log.md)
 
 4. doc/test - 테스팅관련 문서
+
 - [https_cerbot 설정](doc/test/01_Docker_container_running_cehck.md)
 
 5. doc/deploy - 배포포관련 문서
+
 - [github 활용 gitaction pipeline 구성](doc/deploy/01_deploy_with_githubactions.md)
 - [dockerhub 활용 gitaction pipeline 구성](doc/deploy/02_deploy_with_dockerhub.md)
 
 6. doc/troubleshooting - 문제해결관련 문서
+
 - [youtube_api접속불가 문재해결01](doc/troubleshooting/01-1_youtubeapi_trouble_forward_proxy_network_setting.md)
 - 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도한 기록. 네트워크 제한으로 인해 실패.
 
