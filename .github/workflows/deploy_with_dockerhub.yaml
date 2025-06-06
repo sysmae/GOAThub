@@ -6,7 +6,7 @@ on:
 #    branches:
 #      - main
     tags:
-      - 'v*'  # 태그가 v로 시작하는 경우에만 실행됨 
+      - 'v*'  # 태그가 v로 시작하는 경우에만 실행됨.
 
 jobs:
   build-and-deploy:
