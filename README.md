@@ -86,7 +86,7 @@ git push origin feature/기능명
 
 2. **도커 활용**
    docker build -t goathub-app .
-   docker run -p 8501:8501 --env-file .env goathub-app
+   docker run -p 8501:8501 --env-file src/.env goathub-app
 
 ---
 
