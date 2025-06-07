@@ -18,7 +18,7 @@ from notion_utils import (
     save_to_notion_as_page,
 )
 from summarizer import summarize, summarize_sectionwise
-from youtube_utils import extract_video_id, fetch_youtube_transcript_via_proxy
+from youtube_utils import extract_video_id, fetch_youtube_transcript_via_apify, get_transcript
 
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
@@ -59,13 +59,18 @@ def get_gemini_models(api_key=None):
         gemini_models = []
         for m in models:
             # generateContent 지원 모델만
-            if hasattr(m, "supported_generation_methods") and "generateContent" in m.supported_generation_methods:
+            if (
+                hasattr(m, "supported_generation_methods")
+                and "generateContent" in m.supported_generation_methods
+            ):
                 # 모델명은 "models/gemini-1.5-pro" 형태이므로 마지막 부분만 추출
                 model_id = m.name.split("/")[-1]
                 gemini_models.append(model_id)
         # 대표 모델 우선 정렬
         preferred = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-pro", "gemini-2.0-flash"]
-        sorted_models = [m for m in preferred if m in gemini_models] + [m for m in gemini_models if m not in preferred]
+        sorted_models = [m for m in preferred if m in gemini_models] + [
+            m for m in gemini_models if m not in preferred
+        ]
         return sorted_models or preferred
     except Exception:
         return [
@@ -88,11 +93,13 @@ def get_openai_models(api_key):
         models = client.models.list()
         # gpt 계열만 필터링
         gpt_models = [model.id for model in models.data if "gpt" in model.id.lower()]
-        preferred = ["gpt-4o-mini","gpt-4.1-nano"]
-        sorted_models = [m for m in preferred if m in gpt_models] + [m for m in gpt_models if m not in preferred]
+        preferred = ["gpt-4o-mini", "gpt-4.1-nano"]
+        sorted_models = [m for m in preferred if m in gpt_models] + [
+            m for m in gpt_models if m not in preferred
+        ]
         return sorted_models
     except Exception:
-        return ["gpt-4o-mini","gpt-4.1-nano"]
+        return ["gpt-4o-mini", "gpt-4.1-nano"]
 
 
 # 모델 정보 통합 관리
@@ -113,6 +120,7 @@ MODEL_PROVIDERS = {
     },
 }
 
+
 # === 영상 로딩 및 대본 추출 ===
 def load_video(url):
     vid = extract_video_id(url)
@@ -123,10 +131,14 @@ def load_video(url):
     # 영상 ID가 바뀐 경우에만 업데이트
     if st.session_state.video_id != vid:
         try:
-            data = fetch_youtube_transcript_via_proxy(vid)
+            data = get_transcript(vid)
         except Exception as e:
-            st.error(f"대본 추출 실패: {e}")
-            return
+            st.toast(f"기본 대본 추출 실패, 백업 방식으로 재시도합니다. (사유: {e})", icon="⚠️")
+            try:
+                data = fetch_youtube_transcript_via_apify(vid)
+            except Exception as e2:
+                st.error(f"대본 추출 실패: {e2}")
+                return
         txt = data.get("transcript", "")
 
         if txt:
@@ -152,7 +164,9 @@ def run_summary():
             st.session_state.get("transcript_text"),
             model=st.session_state.selected_model_id,
             api_key=st.session_state.get(
-                "gemini_api_key" if "gemini" in st.session_state.selected_model_id else "openai_api_key"
+                "gemini_api_key"
+                if "gemini" in st.session_state.selected_model_id
+                else "openai_api_key"
             ),
         )
         st.session_state.summarize_clicked = True
@@ -170,7 +184,9 @@ def run_sectionwise_summary():
             st.session_state.get("transcript_text"),
             model=st.session_state.selected_model_id,
             api_key=st.session_state.get(
-                "gemini_api_key" if "gemini" in st.session_state.selected_model_id else "openai_api_key"
+                "gemini_api_key"
+                if "gemini" in st.session_state.selected_model_id
+                else "openai_api_key"
             ),
         )
         st.session_state.sectionwise_summarize_clicked = True
@@ -230,7 +246,7 @@ def render_sectionwise_summary():
             download_content = sectionwise
         else:
             for idx, chunk_summary in enumerate(sectionwise):
-                st.markdown(f"#### Section {idx+1}")
+                st.markdown(f"#### Section {idx + 1}")
                 mermaid_blocks = re.findall(r"```mermaid\s+([\s\S]+?)```", chunk_summary)
                 for code in mermaid_blocks:
                     stmd.st_mermaid(code.strip())
@@ -261,7 +277,9 @@ with st.sidebar:
     model_provider = st.radio(
         "모델 제공자 선택:",
         options=list(MODEL_PROVIDERS.keys()),
-        index=list(MODEL_PROVIDERS.keys()).index(st.session_state.get("model_provider", "Google Gemini")),
+        index=list(MODEL_PROVIDERS.keys()).index(
+            st.session_state.get("model_provider", "Google Gemini")
+        ),
         horizontal=True,
         key="model_provider_radio",
     )
@@ -269,13 +287,17 @@ with st.sidebar:
     # 모델 제공자 선택 시 LocalStorage에 저장
     localS.setItem("model_provider", model_provider, key="set_model_provider")
 
-    # API 키 입력창 제거, env에서 자동으로 불러옴
     provider_info = MODEL_PROVIDERS[model_provider]
     api_key_session_key = provider_info["api_key_session_key"]
-    # API 키는 env에서 자동으로 세션에 할당됨
 
-    # 모델 목록 동적 로딩
-    model_list = provider_info["get_models"](st.session_state.get(api_key_session_key, ""))
+    # API 키 입력 여부 확인
+    api_key_value = st.session_state.get(api_key_session_key, "")
+    if not api_key_value:
+        st.warning(f"{provider_info['api_key_label']}를 먼저 환경변수(.env)에 등록하세요.")
+        st.stop()
+
+    # 모델 목록 동적 로딩 (API 키가 있을 때만)
+    model_list = provider_info["get_models"](api_key_value)
     # 모델 선택
     default_model = st.session_state.get("selected_model_id", provider_info["default"])
     selected_model_id = st.selectbox(
