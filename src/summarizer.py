@@ -1,6 +1,3 @@
-import os
-import time
-
 import streamlit as st
 from langchain.chains.summarize import load_summarize_chain
 from langchain.docstore.document import Document
@@ -459,15 +456,15 @@ def split_text_into_chunks(text, chunk_size=10000, overlap=1000):
     current_length = 0
     for word in words:
         if current_length + len(word) > chunk_size and current_chunk:
-            chunks.append(' '.join(current_chunk))
+            chunks.append(" ".join(current_chunk))
             # overlap: 마지막 overlap/10 단어 유지
-            overlap_words = current_chunk[-max(1, overlap // 10):]
+            overlap_words = current_chunk[-max(1, overlap // 10) :]
             current_chunk = list(overlap_words)
             current_length = sum(len(w) + 1 for w in current_chunk)
         current_chunk.append(word)
         current_length += len(word) + 1
     if current_chunk:
-        chunks.append(' '.join(current_chunk))
+        chunks.append(" ".join(current_chunk))
     return chunks
 
 
@@ -505,11 +502,8 @@ def summarize_sectionwise(
             google_api_key=api_key,
         )
         for idx, chunk in enumerate(chunks):
-            info_msg = st.info(f"🔄 섹션별 요약 진행 중: {idx+1}/{len(chunks)}", icon="⏳")
-            # 일정 시간(예: 10초) 후 메시지 자동 삭제
-            time.sleep(10)
-            info_msg.empty()
-            prompt = f"""Create a detailed summary of section {idx+1}.
+            st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
+            prompt = f"""Create a detailed summary of section {idx + 1}.
 Must output in {language}.
 Maintain all important information, arguments, and connections.
 Pay special attention to:
@@ -532,8 +526,8 @@ Text: {chunk}
                 summary = f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
             intermediate_summaries.append(summary)
         # 섹션별 요약이 모두 끝난 후 토스트 메시지 출력
-        st.toast("✅ 섹션별 요약 완료!", icon="🎉")
-        time.sleep(5)
+        st.toast("✅ 섹션별 요약 완료! 이제 전체 요약을 생성합니다.", icon="🎉")
+        # time.sleep(5) 제거 (토스트는 자동 사라짐)
         # 2. 전체 요약 프롬프트 생성
         combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
         final_prompt = f"""
@@ -591,10 +585,12 @@ Make sure the summary is comprehensive and visually organized, so that someone w
             openai_api_key=api_key,
         )
         for idx, chunk in enumerate(chunks):
-            info_msg = st.info(f"🔄 섹션별 요약 진행 중: {idx+1}/{len(chunks)}", icon="⏳")
-            time.sleep(2)
-            info_msg.empty()
-            prompt = f"""Create a detailed summary of section {idx+1}.
+            # info_placeholder = st.empty()
+            # info_msg = info_placeholder.info(
+            #     f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳"
+            # )
+            st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
+            prompt = f"""Create a detailed summary of section {idx + 1}.
 Must output in {language}.
 Maintain all important information, arguments, and connections.
 Pay special attention to:
@@ -616,8 +612,8 @@ Text: {chunk}
             except Exception as e:
                 summary = f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
             intermediate_summaries.append(summary)
-        st.toast("✅ 섹션별 요약 완료!", icon="🎉")
-        time.sleep(1)
+        st.toast("✅ 섹션별 요약 완료! 이제 전체 요약을 생성합니다.", icon="🎉")
+        # time.sleep(1) 제거 (토스트는 자동 사라짐)
         combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
         final_prompt = f"""
 Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
@@ -669,12 +665,18 @@ Make sure the summary is comprehensive and visually organized, so that someone w
         overall_summary
         + "\n\n---\n\n"
         + "\n\n".join(
-            [f"### Section {idx + 1}\n{summary}" for idx, summary in enumerate(intermediate_summaries)]
+            [
+                f"### Section {idx + 1}\n{summary}"
+                for idx, summary in enumerate(intermediate_summaries)
+            ]
         )
     )
+    full_summary = full_summary.strip()
+    if not full_summary:
+        return "⚠️ 요약 생성에 실패했습니다. 입력 텍스트를 확인하세요."
+    # 전체 요약 생성후 토스트 메시지 출력
+    st.toast("✅ 전체 요약 생성 완료!", icon="🎉")
     return full_summary
-
-
 
 
 # summarize 함수가 정의되어 있는지 확인

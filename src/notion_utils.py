@@ -1,5 +1,4 @@
 import re
-from textwrap import wrap
 
 import streamlit as st
 from notion_client import Client
@@ -44,22 +43,26 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
                 before = text[: bold.start()]
                 if before:
                     segments.append({"type": "text", "text": {"content": before}})
-                segments.append({
-                    "type": "text",
-                    "text": {"content": bold.group(1)},
-                    "annotations": {"bold": True},
-                })
-                text = text[bold.end():]
+                segments.append(
+                    {
+                        "type": "text",
+                        "text": {"content": bold.group(1)},
+                        "annotations": {"bold": True},
+                    }
+                )
+                text = text[bold.end() :]
             elif italic:
                 before = text[: italic.start()]
                 if before:
                     segments.append({"type": "text", "text": {"content": before}})
-                segments.append({
-                    "type": "text",
-                    "text": {"content": italic.group(1)},
-                    "annotations": {"italic": True},
-                })
-                text = text[italic.end():]
+                segments.append(
+                    {
+                        "type": "text",
+                        "text": {"content": italic.group(1)},
+                        "annotations": {"italic": True},
+                    }
+                )
+                text = text[italic.end() :]
             else:
                 segments.append({"type": "text", "text": {"content": text}})
                 break
@@ -68,17 +71,106 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
     def add_paragraph_block(text):
         # 긴 줄은 max_length 단위로 분할
         for i in range(0, len(text), max_length):
-            segment = text[i:i+max_length]
-            blocks.append({
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": convert_text_to_rich(segment)
+            segment = text[i : i + max_length]
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": convert_text_to_rich(segment)},
                 }
-            })
+            )
 
     supported_code_langs = {
-        'abap','agda','arduino','ascii art','assembly','bash','basic','bnf','c','c#','c++','clojure','coffeescript','coq','css','dart','dhall','diff','docker','ebnf','elixir','elm','erlang','f#','flow','fortran','gherkin','glsl','go','graphql','groovy','haskell','hcl','html','idris','java','javascript','json','julia','kotlin','latex','less','lisp','livescript','llvm ir','lua','makefile','markdown','markup','matlab','mathematica','mermaid','nix','notion formula','objective-c','ocaml','pascal','perl','php','plain text','powershell','prolog','protobuf','purescript','python','r','racket','reason','ruby','rust','sass','scala','scheme','scss','shell','smalltalk','solidity','sql','swift','toml','typescript','vb.net','verilog','vhdl','visual basic','webassembly','xml','yaml','java/c/c++/c#','notionscript'
+        "abap",
+        "agda",
+        "arduino",
+        "ascii art",
+        "assembly",
+        "bash",
+        "basic",
+        "bnf",
+        "c",
+        "c#",
+        "c++",
+        "clojure",
+        "coffeescript",
+        "coq",
+        "css",
+        "dart",
+        "dhall",
+        "diff",
+        "docker",
+        "ebnf",
+        "elixir",
+        "elm",
+        "erlang",
+        "f#",
+        "flow",
+        "fortran",
+        "gherkin",
+        "glsl",
+        "go",
+        "graphql",
+        "groovy",
+        "haskell",
+        "hcl",
+        "html",
+        "idris",
+        "java",
+        "javascript",
+        "json",
+        "julia",
+        "kotlin",
+        "latex",
+        "less",
+        "lisp",
+        "livescript",
+        "llvm ir",
+        "lua",
+        "makefile",
+        "markdown",
+        "markup",
+        "matlab",
+        "mathematica",
+        "mermaid",
+        "nix",
+        "notion formula",
+        "objective-c",
+        "ocaml",
+        "pascal",
+        "perl",
+        "php",
+        "plain text",
+        "powershell",
+        "prolog",
+        "protobuf",
+        "purescript",
+        "python",
+        "r",
+        "racket",
+        "reason",
+        "ruby",
+        "rust",
+        "sass",
+        "scala",
+        "scheme",
+        "scss",
+        "shell",
+        "smalltalk",
+        "solidity",
+        "sql",
+        "swift",
+        "toml",
+        "typescript",
+        "vb.net",
+        "verilog",
+        "vhdl",
+        "visual basic",
+        "webassembly",
+        "xml",
+        "yaml",
+        "java/c/c++/c#",
+        "notionscript",
     }
 
     for raw_line in lines:
@@ -90,81 +182,84 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
                 code_lines = []
             else:
                 notion_code_lang = code_lang if code_lang in supported_code_langs else "plain text"
-                blocks.append({
-                    "object": "block",
-                    "type": "code",
-                    "code": {
-                        "language": notion_code_lang,
-                        "rich_text": [
-                            {"type": "text", "text": {"content": "\n".join(code_lines)}}
-                        ],
+                blocks.append(
+                    {
+                        "object": "block",
+                        "type": "code",
+                        "code": {
+                            "language": notion_code_lang,
+                            "rich_text": [
+                                {"type": "text", "text": {"content": "\n".join(code_lines)}}
+                            ],
+                        },
                     }
-                })
+                )
                 in_code_block = False
         elif in_code_block:
             code_lines.append(line)
         elif line.startswith("# "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_1",
-                "heading_1": {
-                    "rich_text": convert_text_to_rich(line[2:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_1",
+                    "heading_1": {"rich_text": convert_text_to_rich(line[2:])},
                 }
-            })
+            )
         elif line.startswith("## "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_2",
-                "heading_2": {
-                    "rich_text": convert_text_to_rich(line[3:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_2",
+                    "heading_2": {"rich_text": convert_text_to_rich(line[3:])},
                 }
-            })
+            )
         elif line.startswith("### "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_3",
-                "heading_3": {
-                    "rich_text": convert_text_to_rich(line[4:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {"rich_text": convert_text_to_rich(line[4:])},
                 }
-            })
+            )
         elif line.startswith("#### "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_3",
-                "heading_3": {
-                    "rich_text": convert_text_to_rich(line[5:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {"rich_text": convert_text_to_rich(line[5:])},
                 }
-            })
+            )
         elif line.startswith("##### "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_3",
-                "heading_3": {
-                    "rich_text": convert_text_to_rich(line[6:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {"rich_text": convert_text_to_rich(line[6:])},
                 }
-            })
+            )
         elif line.startswith("###### "):
-            blocks.append({
-                "object": "block",
-                "type": "heading_3",
-                "heading_3": {
-                    "rich_text": convert_text_to_rich(line[7:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {"rich_text": convert_text_to_rich(line[7:])},
                 }
-            })
+            )
         elif line.startswith("- "):
-            blocks.append({
-                "object": "block",
-                "type": "bulleted_list_item",
-                "bulleted_list_item": {
-                    "rich_text": convert_text_to_rich(line[2:])
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {"rich_text": convert_text_to_rich(line[2:])},
                 }
-            })
+            )
         elif line:
             add_paragraph_block(line)
 
     # 잘못된 블록 제거
     return [
-        b for b in blocks
+        b
+        for b in blocks
         if b and isinstance(b, dict) and b.get("object") == "block" and b.get("type") and len(b) > 2
     ]
 
@@ -189,10 +284,12 @@ def save_to_notion_as_page(summary: str):
         video_id = ""
         if yt_url:
             from youtube_utils import extract_video_id
+
             video_id = extract_video_id(yt_url)
             # oEmbed API로 YouTube 제목 가져오기
             try:
                 import requests
+
                 clean_url = f"https://www.youtube.com/watch?v={video_id}"
                 oembed_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
                 resp = requests.get(oembed_url)
@@ -205,61 +302,62 @@ def save_to_notion_as_page(summary: str):
         blocks = []
 
         if yt_url:
-            blocks.append({
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": "🔗 영상 링크",
-                                "link": {"url": yt_url}
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {"content": "🔗 영상 링크", "link": {"url": yt_url}},
                             }
-                        }
-                    ]
+                        ]
+                    },
                 }
-            })
-            blocks.append({
-                "object": "block",
-                "type": "embed",
-                "embed": {
-                    "url": yt_url
-                }
-            })
+            )
+            blocks.append({"object": "block", "type": "embed", "embed": {"url": yt_url}})
 
-        blocks.append({
-            "object": "block",
-            "type": "heading_2",
-            "heading_2": {
-                "rich_text": [
-                    {"type": "text", "text": {"content": ai_title}}
-                ]
+        blocks.append(
+            {
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {"rich_text": [{"type": "text", "text": {"content": ai_title}}]},
             }
-        })
+        )
 
         blocks += markdown_to_notion_blocks(content)
         blocks.append({"object": "block", "type": "divider", "divider": {}})
 
-        blocks.append({
-            "object": "block",
-            "type": "heading_2",
-            "heading_2": {"rich_text": [{"type": "text", "text": {"content": "📜 대본"}}]}
-        })
+        blocks.append(
+            {
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {"rich_text": [{"type": "text", "text": {"content": "📜 대본"}}]},
+            }
+        )
 
         transcript_text = st.session_state.get("transcript_text", "")
         for i in range(0, len(transcript_text), 1800):
-            blocks.append({
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {"rich_text": [{"type": "text", "text": {"content": transcript_text[i:i+1800]}}]}
-            })
+            blocks.append(
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [
+                            {"type": "text", "text": {"content": transcript_text[i : i + 1800]}}
+                        ]
+                    },
+                }
+            )
 
-        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else ""
+        thumbnail_url = (
+            f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg" if video_id else ""
+        )
         thumbnail_url = thumbnail_url or "https://via.placeholder.com/800x400?text=No+Thumbnail"
 
         chunk_size = 100
-        block_chunks = [blocks[i:i + chunk_size] for i in range(0, len(blocks), chunk_size)]
+        block_chunks = [blocks[i : i + chunk_size] for i in range(0, len(blocks), chunk_size)]
 
         page = notion.pages.create(
             parent={"type": "database_id", "database_id": parent_database_id},
@@ -273,14 +371,13 @@ def save_to_notion_as_page(summary: str):
                     }
                 ]
             },
-            children=block_chunks[0]
+            children=block_chunks[0],
         )
 
         for chunk in block_chunks[1:]:
             notion.blocks.children.append(page["id"], children=chunk)
 
-        st.success("Summary has been saved as a new page in Notion!")
+        st.toast("Summary has been saved as a new page in Notion!", icon="✅")
 
     except Exception as e:
         st.error(f"Error saving to Notion: {e}")
-
