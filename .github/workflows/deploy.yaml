@@ -1,12 +1,10 @@
 name: Build and Deploy to EC2
 
-# main 브랜치에 병합될 때 실행됨.
+# 커밋 태그가 v로 시작 시 트리거
 on:
   push:
-#    branches:
-#      - main
     tags:
-      - 'v*'  # 태그가 v로 시작하는 경우에만 실행됨
+      - 'v*'  
 
 jobs:
   build-and-deploy:
