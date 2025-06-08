@@ -1,5 +1,9 @@
 # GOATube 진행 보고서
 
+> Github 주소 : `https://github.com/sysmae/GOAThub`
+> 
+> Github / 프로젝트 내 진행보고서 위치 : `docs/GOAThub_진행보고서.md`
+
 ## 1. 프로젝트 개요
 
 ### GOATube 프로젝트
