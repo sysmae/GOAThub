@@ -1,6 +1,17 @@
 # 1. Python 3.12 slim 이미지를 베이스로 사용
 FROM python:3.12-slim
 
+# git secret 호출 env 설정 - Build-time arguments
+ARG GOOGLE_API_KEY
+ARG WEBSHARE_PROXY_URL
+
+
+
+# Set as environment variables inside container
+ENV GOOGLE_API_KEY=${GOOGLE_API_KEY}
+ENV WEBSHARE_PROXY_URL=${WEBSHARE_PROXY_URL}
+
+
 # 2. 작업 디렉터리 설정
 WORKDIR /app
 
