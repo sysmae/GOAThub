@@ -40,14 +40,13 @@
 - 직관적 UI 제공 (Streamlit)
 - 유튜브 영상 링크 입력 후, 대본 추출 및 요약
 - 노션 저장 기능 연동
-- 사용자 맞춤형 옵션 제공
 
 ## 향후 확장 고려 기능
 
-- 옵시디언 저장 연동
-- 음성 인식 기반 대본 생성
-- 관련 자료 링크 추천
-- 블로그 포스팅, 퀴즈 생성, 챗봇 기능 등
+- 긴 영상 대본 섹션별 요약
+- 모델 등 사용자 맞춤형 옵션 제공
+- 다국어 지원 (한국어, 영어 등)
+- 챗봇 기능 등
 
 ---
 
@@ -91,7 +90,7 @@ streamlit run src/app.py
 
 ```bash
 docker build -t goathub-app .
-docker run -p 8501:8501 --env-file .env goathub-app
+docker run -p 8501:8501 --env-file src/.env goathub-app
 ```
 
 ---
@@ -102,40 +101,69 @@ docker run -p 8501:8501 --env-file .env goathub-app
 - 기능 개발 후 PR 요청
 - 코드 리뷰 후 머지
 
-## Deovops 로그
-1. doc/infra - 인프라 관련 설정 로그
-- [AWS 인스턴스 생성](doc/infra/01_aws_instance_create.md)
-- [Docker 설치 로그](doc/infra/02_docker_install_log.md)
-- [Docker Compose 설치](doc/infra/03_docker_compose_install.md)
-- [도메인 매핑 설정](doc/infra/04_domain_config.md)
-- [Dockerfile 설정](doc/infra/05_Dockerfile.md)
-- [Nginx 리버스프록시 설정](doc/infra/06_nginx_reverse_proxy.md)
-- [docker-compose.yml 설정](doc/infra/07_docker_compose.md)
-- [https_cerbot 설정](doc/infra/08_https_certbot.md)
-- [https_cron 설정](doc/infra/09_https_cron.md)
 
-2. doc/reference - 팀원 참조 가이드
-- [Docker 설치가이드 (팀원용)](doc/reference/01_Docker_install_guide.md)
-- [Docker Concept (팀원용)](doc/reference/02_Docker_Concept)
-- [Docker Instruction (팀원용)](doc/reference/03_Dockere_Instruction)
+---
 
+#  DevOps 문서 요약
 
-3. doc/security - 보안정책 문서
-- [보안 그룹 인바운드 규칙](doc/01_security/01_Infra_log.md)
+## 📃 공식 문서 안내
+해당 프로젝트의 인프라 설정 및 배포와 관련된 상세 문서는 **Notion**에 정리되어 있습니다.  
+> GitHub에는 요약된 `.md` 파일만 포함되어 있으며, 이미지, 표, 스크린샷 등은 Notion 문서에서 확인해주세요.
 
-4. doc/test - 테스팅관련 문서
-- [https_cerbot 설정](doc/test/01_Docker_container_running_cehck.md)
+---
 
-5. doc/deploy - 배포포관련 문서
-- [github 활용 gitaction pipeline 구성](doc/deploy/01_deploy_with_githubactions.md)
-- [dockerhub 활용 gitaction pipeline 구성](doc/deploy/02_deploy_with_dockerhub.md)
+## 1. `doc/infra` - 인프라 구성 설정
+- [01. AWS 인스턴스 생성](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/01_aws_instance_create.md)
+- [02. Docker 설치 로그](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/02_docker_install_log.md)
+- [03. Docker Compose 설치](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/03_docker_compose_instal1.md)
+- [04. 도메인 매핑 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/04_domain_config.md)
+- [05. Dockerfile 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/05_Dockerfile.md)
+- [06. Nginx 리버스프록시 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/06_nginx_reverse_proxy.md)
+- [07. docker-compose.yml 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/07_docker_compose.md)
+- [08. HTTPS 인증서 (certbot) 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/08_https_certbot.md)
+- [09. 인증서 갱신 자동화 (cron)](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/09_https_cron.md)
 
-6. doc/troubleshooting - 문제해결관련 문서
-- [youtube_api접속불가 문재해결01](doc/troubleshooting/01-1_youtubeapi_trouble_forward_proxy_network_setting.md)
-- 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도한 기록. 네트워크 제한으로 인해 실패.
+---
 
-- [youtube_api접속불가 문재해결02](doc/troubleshooting/01-2_youtubeapi_trouble_reverse_ssh_ternerling_network_setting.md)
-- EC2 → 로컬 PC 간 역방향 SSH 포워딩 터널 구성 실험. 로컬 프록시로 요청 우회 시도. SSH 연결은 성공했으나 라우터 차단으로 트래픽 전달 실패.
+## 2. `doc/reference` - 팀원용 참조 문서
+- [01. Docker 설치가이드](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/01_Docker_install_guide.md)
+- [02. Docker Concept](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/02_Docker_Concept.md)
+- [03. Docker Instruction](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/03_Docker_Instruction.md)
 
-- [youtube_api접속불가 문재해결03](doc/troubleshooting/01-3_youtubeapi_trouble_deburgging.md)
-- 문제 원인 분석을 위해 EC2 내부에 별도 Squid 서버 구성 후 단계별 네트워크 흐름 점검. 통신 경로, 프록시 동작, 방화벽 원인 디버깅.
+---
+
+## 3. `doc/security` - 보안 정책 및 설정
+- [01. EC2 인바운드 보안 그룹 규칙](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/01_ec2_inbound_rule_config.md)
+- [02. GitHub Secrets 및 환경변수 관리](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/02_github_secret_management.md)
+- [03. SSH Key 및 인증서 설정 가이드](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/03_ssh_key_management.md)
+
+---
+
+## 4. `doc/test` - 서버 동작 및 컨테이너 체크
+- [01. 컨테이너 및 서버 동작 테스트](https://github.com/sysmae/GOAThub/blob/main/doc/04_test/01_Docker_container_running_cehck.md)
+
+---
+
+## 5. `doc/deploy` - 배포 자동화 및 GitHub Actions 구성
+- [01. GitHub 기반 배포 pipeline 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/01_deploy_with_github.md)
+- [02. DockerHub 기반 배포 pipeline 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/02_deploy_with_dockerhub.md)
+- [03. 태그 기반 배포 + 로그 작성 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/03_tag_triggered_deploy_with_logging.md)
+- [04. deploy.yml 스크립트 설명](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/04_deploy.yml_explained.md)
+- [05. 블루-그린 무중단 배포 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/05_blue_green_deployment_with_zero_downtime.md)
+
+---
+
+## 6. `doc/troubleshooting` - 문제 해결 기록
+- [01. Webshare 프록시 직접 설정 시도 (실패)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/01_youtubeapi_trouble_forward_proxy_network_setting.md)  
+  → 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도. 네트워크 제한으로 실패.
+
+- [02. 역방향 SSH 프록시 우회 실험 (라우터 차단으로 실패)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/02_youtubeapi_trouble_reverse_ssh_tunnerling_network_setting.md)  
+  → EC2 → 로컬 PC 간 역방향 SSH 터널링 구성 실험. 라우터 차단으로 트래픽 전달 실패.
+
+- [03. EC2 내 Squid 구성 및 프록시 트래픽 점검 및 디버깅](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/03_youtubeapi_trouble_debugging.md)  
+  → Squid 서버 자체 구성 후 단계별 흐름 분석, 통신 경로/방화벽 점검 등 디버깅.
+
+- [04. residential 프록시 교체 및 메인 코드 수정 (성공)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/04_youtubeapi_trouble_residental_proxy.md)  
+  → SSH 역방향 프록시 해제 후 포워드 프록시 구조로 변경. API 정상 통신 확인.
+
+---

@@ -1,9 +1,5 @@
-import os
-
 import streamlit as st
 from langchain.chains.summarize import load_summarize_chain
-
-# from langchain.chat_models import ChatGoogleGenerativeAI
 from langchain.docstore.document import Document
 from langchain.prompts import PromptTemplate
 from langchain.prompts.chat import (
@@ -12,83 +8,9 @@ from langchain.prompts.chat import (
     SystemMessagePromptTemplate,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 from constant import LANG_OPTIONS
-
-
-def summarize_text(text):
-    google_api_key = os.getenv("GOOGLE_API_KEY")
-    if not google_api_key:
-        return "GOOGLE_API_KEY가 .env 파일에 없습니다."
-    prompt_template = """
-# 📑 유튜브 대본을 계층적·시각적 Markdown 요약으로 변환하는 프롬프트
-
-## 🟢 목적
-유튜브 영상 대본을 **명확하고 구조적인 요약**으로 재구성합니다. 반드시 한국어로 출력하세요. 아래의 스타일 가이드와 작성 규칙을 반드시 준수하세요.
-
----
-## 📋 프롬프트 지시사항
-
-다음 텍스트를 아래의 Markdown 구조로 요약하세요.
-
-### 1. 구조 및 포맷
-- **최상위 제목**: `#` + 영상 핵심 주제 (이모지 포함)
-- **주요 섹션**: `##` + 이모지 + 핵심 키워드
-- **하위 항목**: `###` + 번호. 키워드
-- **세부 내용**: 불릿포인트(–)로 정리, 필요시 소주제 추가
-- **최소 3단계 이상 계층화**
-- **중요 용어는 굵게, 수치/연도/핵심 결과는 _기울임_ 처리**
-
-### 2. 시각적 요소
-- 각 섹션/항목에 어울리는 이모지 활용
-- 필요 시 간단한 흐름도(flowchart) 형태의 Mermaid 다이어그램을 Notion 호환 기본 문법으로 삽입
-- Mermaid 코드 블록은 반드시 세 개의 backtick과 `mermaid` 키워드로 감싸기
-- 복잡한 문법은 사용하지 않고, 기본 형태로 제작
-- 표, 순서도, 타임라인 등 Markdown 지원 요소 적극 사용
-
-### 3. 서술 스타일
-- 객관적·설명체, 학술적 톤
-- 불필요한 감상/의견/광고성 문구 배제
-- 핵심 정보 위주로 간결하게 정리
-- 동사는 "~하였다" 등 과거형 사용
-
-### 4. 예시
-# 💡 테슬라의 성장과 도전
-## 1. 🚗 테슬라의 창립과 비전
-- **일론 머스크**가 *2003년* 테슬라 설립에 참여하였다.
-- 전기차 대중화를 목표로 하였다.
-## 1.1. 초기 투자와 기술 개발
-- *2008년* 첫 모델 **로드스터** 출시.
-- 배터리 기술 혁신을 이끌었다.
-## 2. 📈 시장 확장과 생산 전략
-- 기가팩토리 설립으로 생산량을 *3배* 늘렸다.
-- **모델 3** 출시로 대중 시장 진입에 성공하였다.
-`texttimeline
-    2003 : 창립
-    2008 : 로드스터 출시
-    2017 : 모델 3 출시`
----
-
-## 🟨 주의사항
-- 영상 대본의 모든 주요 내용을 빠짐없이 구조적으로 포함
-- 이모지, 계층 구조, 시각화 요소 등은 반드시 포함
-- 광고, 불필요한 감상, 사족은 배제
-
----
-아래 대본을 위 가이드에 따라 요약하세요.
-
-{text}
-
-마크다운 형식의 요약:
-"""
-    PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash", temperature=0, google_api_key=google_api_key
-    )
-    chain = load_summarize_chain(llm, chain_type="stuff", prompt=PROMPT, verbose=False)
-    docs = [Document(page_content=text)]
-    summary = chain.run(docs)
-    return summary
 
 
 # 다국어 프롬프트 템플릿
@@ -524,81 +446,307 @@ Un resumen en formato markdown:
         """
 
 
-# 요약 엔진
-# def summarize(text):
-#     google_api_key = os.getenv("GOOGLE_API_KEY")
-#     if not google_api_key:
-#         return "GOOGLE_API_KEY가 .env 파일에 없습니다."
-#     lang_code = st.session_state.get("selected_lang")
-#     llm = ChatGoogleGenerativeAI(
-#         model="gemini-2.0-flash", temperature=0, google_api_key=google_api_key
-#     )
-#     PROMPT = PromptTemplate(template=get_prompt(lang_code), input_variables=["text"])
-#     chain = load_summarize_chain(llm, chain_type="stuff", prompt=PROMPT, verbose=False)
-#     docs = [Document(page_content=text)]
-#     summary = chain.run(docs)
-#     return summary
+def split_text_into_chunks(text, chunk_size=10000, overlap=1000):
+    """
+    텍스트를 단어 단위로 청크로 분할 (overlap은 문자수 기준)
+    """
+    words = text.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    for word in words:
+        if current_length + len(word) > chunk_size and current_chunk:
+            chunks.append(" ".join(current_chunk))
+            # overlap: 마지막 overlap/10 단어 유지
+            overlap_words = current_chunk[-max(1, overlap // 10) :]
+            current_chunk = list(overlap_words)
+            current_length = sum(len(w) + 1 for w in current_chunk)
+        current_chunk.append(word)
+        current_length += len(word) + 1
+    if current_chunk:
+        chunks.append(" ".join(current_chunk))
+    return chunks
 
 
-def summarize(text: str) -> str:
+def summarize_sectionwise(
+    text: str,
+    model: str,
+    chunk_size=10000,
+    overlap=1000,
+    api_key: str = None,
+) -> str:
+    """
+    대본을 청크로 나누고 각 청크별로 요약을 생성한 뒤,
+    전체 요약(상위 요약)과 섹션별 요약을 모두 포함한 Markdown을 반환
+    """
+    lang_code = st.session_state.get("selected_lang")
+    lang_map = {
+        "ko": "Korean",
+        "en": "English",
+        "ja": "Japanese",
+        "zh": "Chinese",
+        "fr": "French",
+        "de": "German",
+        "es": "Spanish",
+    }
+    language = lang_map.get(lang_code, "Korean")
+    chunks = split_text_into_chunks(text, chunk_size=chunk_size, overlap=overlap)
+    intermediate_summaries = []
+    # 1. 섹션별 요약 생성
+    if "gemini" in model:
+        if not api_key:
+            return "Google Gemini API Key가 입력되지 않았습니다."
+        llm = ChatGoogleGenerativeAI(
+            model=model,
+            temperature=0,
+            google_api_key=api_key,
+        )
+        for idx, chunk in enumerate(chunks):
+            st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
+            prompt = f"""Create a detailed summary of section {idx + 1}.
+Must output in {language}.
+Maintain all important information, arguments, and connections.
+Pay special attention to:
+- Main topics and arguments
+- Important details and examples
+- Connections with other mentioned topics
+- Key statements and conclusions
+
+Text: {chunk}
+"""
+            docs = [Document(page_content=prompt)]
+            try:
+                summary = load_summarize_chain(
+                    llm=llm,
+                    chain_type="stuff",
+                    prompt=PromptTemplate(template="{text}", input_variables=["text"]),
+                    verbose=False,
+                ).run(docs)
+            except Exception as e:
+                summary = f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+            intermediate_summaries.append(summary)
+        # 섹션별 요약이 모두 끝난 후 토스트 메시지 출력
+        st.toast("✅ 섹션별 요약 완료! 이제 전체 요약을 생성합니다.", icon="🎉")
+        # time.sleep(5) 제거 (토스트는 자동 사라짐)
+        # 2. 전체 요약 프롬프트 생성
+        combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
+        final_prompt = f"""
+Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
+
+Follow these instructions and formatting rules:
+
+- Structure and formatting.
+  - Top Title: Use # followed by Video Key Topics (with emoji).
+  - Main sections: Use ## with emoji and key words.
+  - Subheadings: Use #### with numbers and keywords.
+  - Details: Organize with bullet points (-), add subtopics as needed.
+  - Hierarchize at least three levels.
+  - Use bold for important terms, and italics for numbers/years/key findings.
+
+- Use the following variable structure for each section:
+  - 🎯 Main Title: Use a descriptive, emoji-enhanced main title summarizing the core topic.
+  - 📝 Overview: Provide a concise (2-3 sentences) context and main purpose.
+  - 🔑 Key Points: Extract and explain the main arguments, with at least three levels of structure. Combine each section title with a relevant emoji and keyword. Use bold for important terms and _italics_ for key figures, years, or results. Add subtopics as needed.
+  - 💡 Takeaways: List 3-5 practical insights, explaining their significance.
+
+- Style and Visual Guide:
+  - Output must be in {language}.
+  - Use emojis in every section and subsection title.
+  - Avoid unnecessary opinions, advertisements, or non-essential commentary.
+  - Summarize information objectively and concisely, focusing on key points.
+  - Ensure all major content from the original is included and logically structured.
+
+Text to summarize: {combined_summary}
+
+Make sure the summary is comprehensive and visually organized, so that someone who hasn't seen the original content can fully understand it.
+
+---
+"""
+        docs = [Document(page_content=final_prompt)]
+        try:
+            overall_summary = load_summarize_chain(
+                llm=llm,
+                chain_type="stuff",
+                prompt=PromptTemplate(template="{text}", input_variables=["text"]),
+                verbose=False,
+            ).run(docs)
+        except Exception as e:
+            overall_summary = f"⚠️ 전체 요약 생성 중 오류가 발생했습니다: {e}"
+    elif "gpt" in model:
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            return "langchain-openai 패키지가 설치되어 있지 않습니다. pip install langchain-openai 후 이용하세요."
+        if not api_key:
+            return "OpenAI API Key가 입력되지 않았습니다."
+        llm = ChatOpenAI(
+            model=model,
+            temperature=0,
+            openai_api_key=api_key,
+        )
+        for idx, chunk in enumerate(chunks):
+            # info_placeholder = st.empty()
+            # info_msg = info_placeholder.info(
+            #     f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳"
+            # )
+            st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
+            prompt = f"""Create a detailed summary of section {idx + 1}.
+Must output in {language}.
+Maintain all important information, arguments, and connections.
+Pay special attention to:
+- Main topics and arguments
+- Important details and examples
+- Connections with other mentioned topics
+- Key statements and conclusions
+
+Text: {chunk}
+"""
+            docs = [Document(page_content=prompt)]
+            try:
+                summary = load_summarize_chain(
+                    llm=llm,
+                    chain_type="stuff",
+                    prompt=PromptTemplate(template="{text}", input_variables=["text"]),
+                    verbose=False,
+                ).run(docs)
+            except Exception as e:
+                summary = f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+            intermediate_summaries.append(summary)
+        st.toast("✅ 섹션별 요약 완료! 이제 전체 요약을 생성합니다.", icon="🎉")
+        # time.sleep(1) 제거 (토스트는 자동 사라짐)
+        combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
+        final_prompt = f"""
+Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
+
+Follow these instructions and formatting rules:
+
+- Structure and formatting.
+  - Top Title: Use # followed by Video Key Topics (with emoji).
+  - Main sections: Use ## with emoji and key words.
+  - Subheadings: Use #### with numbers and keywords.
+  - Details: Organize with bullet points (-), add subtopics as needed.
+  - Hierarchize at least three levels.
+  - Use bold for important terms, and italics for numbers/years/key findings.
+
+- Use the following variable structure for each section:
+  - 🎯 Main Title: Use a descriptive, emoji-enhanced main title summarizing the core topic.
+  - 📝 Overview: Provide a concise (2-3 sentences) context and main purpose.
+  - 🔑 Key Points: Extract and explain the main arguments, with at least three levels of structure. Combine each section title with a relevant emoji and keyword. Use bold for important terms and _italics_ for key figures, years, or results. Add subtopics as needed.
+  - 💡 Takeaways: List 3-5 practical insights, explaining their significance.
+
+- Style and Visual Guide:
+  - Output must be in {language}.
+  - Use emojis in every section and subsection title.
+  - Avoid unnecessary opinions, advertisements, or non-essential commentary.
+  - Summarize information objectively and concisely, focusing on key points.
+  - Ensure all major content from the original is included and logically structured.
+
+Text to summarize: {combined_summary}
+
+Make sure the summary is comprehensive and visually organized, so that someone who hasn't seen the original content can fully understand it.
+
+---
+"""
+        docs = [Document(page_content=final_prompt)]
+        try:
+            overall_summary = load_summarize_chain(
+                llm=llm,
+                chain_type="stuff",
+                prompt=PromptTemplate(template="{text}", input_variables=["text"]),
+                verbose=False,
+            ).run(docs)
+        except Exception as e:
+            overall_summary = f"⚠️ 전체 요약 생성 중 오류가 발생했습니다: {e}"
+    else:
+        return "지원하지 않는 모델입니다."
+
+    # 전체 요약 + 섹션별 요약을 Markdown으로 합쳐 반환
+    full_summary = (
+        overall_summary
+        + "\n\n---\n\n"
+        + "\n\n".join(
+            [
+                f"### Section {idx + 1}\n{summary}"
+                for idx, summary in enumerate(intermediate_summaries)
+            ]
+        )
+    )
+    full_summary = full_summary.strip()
+    if not full_summary:
+        return "⚠️ 요약 생성에 실패했습니다. 입력 텍스트를 확인하세요."
+    # 전체 요약 생성후 토스트 메시지 출력
+    st.toast("✅ 전체 요약 생성 완료!", icon="🎉")
+    return full_summary
+
+
+# summarize 함수가 정의되어 있는지 확인
+def summarize(
+    text: str,
+    model: str,
+    api_key: str = None,
+) -> str:
     import google.api_core.exceptions
-
-    google_api_key = os.getenv("GOOGLE_API_KEY")
-    if not google_api_key:
-        return "GOOGLE_API_KEY가 .env 파일에 없습니다."
 
     lang_code = st.session_state.get("selected_lang")
 
-    # 1) LLM 생성
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
-        temperature=0,
-        google_api_key=google_api_key,
-    )
-
-    # 2) 기존 프롬프트 유지
-    original_template = get_prompt(lang_code)  # 기존 get_prompt 함수에서 가져온 템플릿
-
-    # 3) 시스템 메시지: 마크다운 강제화
-    system_msg = """
-    You are a helpful assistant.
-    Always respond in valid Markdown format.
-    - Use headings (##, ###) and bullet points.
-    - Do not output plain text or HTML.
-    """
-
-    # 4) ChatPromptTemplate 구성
-    chat_prompt = ChatPromptTemplate.from_messages(
-        [
-            SystemMessagePromptTemplate.from_template(system_msg),
-            HumanMessagePromptTemplate.from_template(original_template),
-        ]
-    )
-
-    # 5) 요약 체인 실행 (예외 처리 추가)
-    chain = load_summarize_chain(
-        llm=llm,
-        chain_type="stuff",
-        prompt=chat_prompt,
-        verbose=False,
-    )
-    docs = [Document(page_content=text)]
-    try:
-        return chain.run(docs)
-    except google.api_core.exceptions.ResourceExhausted:
-        return (
-            "⚠️ Google Generative AI API 사용량이 초과되었습니다. "
-            "잠시 후 다시 시도하거나, API 할당량을 확인하세요."
+    # api_key는 app.py/config.py에서 env→세션으로 이미 반영됨
+    if "gemini" in model:
+        if not api_key:
+            return "Google Gemini API Key가 입력되지 않았습니다."
+        llm = ChatGoogleGenerativeAI(
+            model=model,
+            temperature=0,
+            google_api_key=api_key,
         )
-    except Exception as e:
-        return f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
-
-
-# 사용할 수 있는 대표적인 Google Generative AI 모델 이름 예시:
-# - gemini-1.0-pro
-# - gemini-1.5-pro
-# - gemini-1.5-flash
-# - gemini-2.0-pro
-# - gemini-2.0-flash
-# 필요에 따라 아래와 같이 model 파라미터를 변경하세요.
-# 예시: model="gemini-1.5-pro"
+        original_template = get_prompt(lang_code)
+        system_msg = """
+        You are a helpful assistant.
+        Always respond in valid Markdown format.
+        - Use headings (##, ###) and bullet points.
+        - Do not output plain text or HTML.
+        """
+        chat_prompt = ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(system_msg),
+                HumanMessagePromptTemplate.from_template(original_template),
+            ]
+        )
+        chain = load_summarize_chain(
+            llm=llm,
+            chain_type="stuff",
+            prompt=chat_prompt,
+            verbose=False,
+        )
+        docs = [Document(page_content=text)]
+        try:
+            return chain.run(docs)
+        except google.api_core.exceptions.ResourceExhausted:
+            return (
+                "⚠️ Google Generative AI API 사용량이 초과되었습니다. "
+                "잠시 후 다시 시도하거나, API 할당량을 확인하세요."
+            )
+        except Exception as e:
+            return f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+    elif "gpt" in model:
+        if not api_key:
+            return "OpenAI API Key가 입력되지 않았습니다."
+        prompt_template = get_prompt(lang_code)
+        PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
+        llm = ChatOpenAI(
+            model=model,
+            temperature=0,
+            openai_api_key=api_key,
+        )
+        chain = load_summarize_chain(
+            llm=llm,
+            chain_type="stuff",
+            prompt=PROMPT,
+            verbose=False,
+        )
+        docs = [Document(page_content=text)]
+        try:
+            return chain.run(docs)
+        except Exception as e:
+            return f"⚠️ OpenAI 요약 생성 중 오류가 발생했습니다: {e}"
+    else:
+        return "지원하지 않는 모델입니다."
