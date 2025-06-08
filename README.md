@@ -81,11 +81,17 @@ git push origin feature/기능명
 ## 실행법
 
 1. **실행 명렁어**
-   streamlit run src/app.py
+
+```bash
+streamlit run src/app.py
+```
 
 2. **도커 활용**
-   docker build -t goathub-app .
-   docker run -p 8501:8501 --env-file src/.env goathub-app
+
+```bash
+docker build -t goathub-app .
+docker run -p 8501:8501 --env-file src/.env goathub-app
+```
 
 ---
 
