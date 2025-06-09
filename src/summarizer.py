@@ -10,7 +10,7 @@ from langchain.prompts.chat import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
-from constant import LANG_OPTIONS
+from constant import LANG_CODE_TO_LANGNAME, LANG_OPTIONS, UI_LABELS
 
 
 # 다국어 프롬프트 템플릿
@@ -475,27 +475,15 @@ def summarize_sectionwise(
     overlap=1000,
     api_key: str = None,
 ) -> str:
-    """
-    대본을 청크로 나누고 각 청크별로 요약을 생성한 뒤,
-    전체 요약(상위 요약)과 섹션별 요약을 모두 포함한 Markdown을 반환
-    """
-    lang_code = st.session_state.get("selected_lang")
-    lang_map = {
-        "ko": "Korean",
-        "en": "English",
-        "ja": "Japanese",
-        "zh": "Chinese",
-        "fr": "French",
-        "de": "German",
-        "es": "Spanish",
-    }
-    language = lang_map.get(lang_code, "Korean")
+    lang_code = st.session_state.get("selected_lang", "ko")
+    LABELS = UI_LABELS.get(lang_code, UI_LABELS["ko"])
+    language = LANG_CODE_TO_LANGNAME.get(lang_code, "Korean")
     chunks = split_text_into_chunks(text, chunk_size=chunk_size, overlap=overlap)
     intermediate_summaries = []
     # 1. 섹션별 요약 생성
     if "gemini" in model:
         if not api_key:
-            return "Google Gemini API Key가 입력되지 않았습니다."
+            return LABELS["missing_api_key"].format("Google Gemini")
         llm = ChatGoogleGenerativeAI(
             model=model,
             temperature=0,
@@ -523,12 +511,9 @@ Text: {chunk}
                     verbose=False,
                 ).run(docs)
             except Exception as e:
-                summary = f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+                summary = f"{LABELS['summary_error']}: {e}"
             intermediate_summaries.append(summary)
-        # 섹션별 요약이 모두 끝난 후 토스트 메시지 출력
-        st.toast("✅ 섹션별 요약 완료! 이제 전체 요약을 생성합니다.", icon="🎉")
-        # time.sleep(5) 제거 (토스트는 자동 사라짐)
-        # 2. 전체 요약 프롬프트 생성
+        st.toast(LABELS["sectionwise_done"], icon="🎉")
         combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
         final_prompt = f"""
 Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
@@ -571,24 +556,20 @@ Make sure the summary is comprehensive and visually organized, so that someone w
                 verbose=False,
             ).run(docs)
         except Exception as e:
-            overall_summary = f"⚠️ 전체 요약 생성 중 오류가 발생했습니다: {e}"
+            overall_summary = f"{LABELS['overall_summary_error']}: {e}"
     elif "gpt" in model:
         try:
             from langchain_openai import ChatOpenAI
         except ImportError:
-            return "langchain-openai 패키지가 설치되어 있지 않습니다. pip install langchain-openai 후 이용하세요."
+            return LABELS["openai_import_error"]
         if not api_key:
-            return "OpenAI API Key가 입력되지 않았습니다."
+            return LABELS["missing_api_key"].format("OpenAI")
         llm = ChatOpenAI(
             model=model,
             temperature=0,
             openai_api_key=api_key,
         )
         for idx, chunk in enumerate(chunks):
-            # info_placeholder = st.empty()
-            # info_msg = info_placeholder.info(
-            #     f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳"
-            # )
             st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
             prompt = f"""Create a detailed summary of section {idx + 1}.
 Must output in {language}.
@@ -610,10 +591,9 @@ Text: {chunk}
                     verbose=False,
                 ).run(docs)
             except Exception as e:
-                summary = f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+                summary = f"{LABELS['summary_error']}: {e}"
             intermediate_summaries.append(summary)
-        st.toast("✅ 섹션별 요약 완료! 이제 전체 요약을 생성합니다.", icon="🎉")
-        # time.sleep(1) 제거 (토스트는 자동 사라짐)
+        st.toast(LABELS["sectionwise_done"], icon="🎉")
         combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
         final_prompt = f"""
 Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
@@ -656,9 +636,9 @@ Make sure the summary is comprehensive and visually organized, so that someone w
                 verbose=False,
             ).run(docs)
         except Exception as e:
-            overall_summary = f"⚠️ 전체 요약 생성 중 오류가 발생했습니다: {e}"
+            overall_summary = f"{LABELS['overall_summary_error']}: {e}"
     else:
-        return "지원하지 않는 모델입니다."
+        return LABELS["unsupported_model"]
 
     # 전체 요약 + 섹션별 요약을 Markdown으로 합쳐 반환
     full_summary = (
@@ -673,13 +653,11 @@ Make sure the summary is comprehensive and visually organized, so that someone w
     )
     full_summary = full_summary.strip()
     if not full_summary:
-        return "⚠️ 요약 생성에 실패했습니다. 입력 텍스트를 확인하세요."
-    # 전체 요약 생성후 토스트 메시지 출력
-    st.toast("✅ 전체 요약 생성 완료!", icon="🎉")
+        return LABELS["summary_fail"]
+    st.toast(LABELS["overall_summary_done"], icon="🎉")
     return full_summary
 
 
-# summarize 함수가 정의되어 있는지 확인
 def summarize(
     text: str,
     model: str,
@@ -687,12 +665,12 @@ def summarize(
 ) -> str:
     import google.api_core.exceptions
 
-    lang_code = st.session_state.get("selected_lang")
+    lang_code = st.session_state.get("selected_lang", "ko")
+    LABELS = UI_LABELS.get(lang_code, UI_LABELS["ko"])
 
-    # api_key는 app.py/config.py에서 env→세션으로 이미 반영됨
     if "gemini" in model:
         if not api_key:
-            return "Google Gemini API Key가 입력되지 않았습니다."
+            return LABELS["missing_api_key"].format("Google Gemini")
         llm = ChatGoogleGenerativeAI(
             model=model,
             temperature=0,
@@ -721,15 +699,12 @@ def summarize(
         try:
             return chain.run(docs)
         except google.api_core.exceptions.ResourceExhausted:
-            return (
-                "⚠️ Google Generative AI API 사용량이 초과되었습니다. "
-                "잠시 후 다시 시도하거나, API 할당량을 확인하세요."
-            )
+            return LABELS["gemini_quota_exceeded"]
         except Exception as e:
-            return f"⚠️ 요약 생성 중 오류가 발생했습니다: {e}"
+            return f"{LABELS['summary_error']}: {e}"
     elif "gpt" in model:
         if not api_key:
-            return "OpenAI API Key가 입력되지 않았습니다."
+            return LABELS["missing_api_key"].format("OpenAI")
         prompt_template = get_prompt(lang_code)
         PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
         llm = ChatOpenAI(
@@ -747,6 +722,6 @@ def summarize(
         try:
             return chain.run(docs)
         except Exception as e:
-            return f"⚠️ OpenAI 요약 생성 중 오류가 발생했습니다: {e}"
+            return f"{LABELS['openai_summary_error']}: {e}"
     else:
-        return "지원하지 않는 모델입니다."
+        return LABELS["unsupported_model"]
