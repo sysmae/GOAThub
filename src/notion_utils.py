@@ -264,6 +264,25 @@ def markdown_to_notion_blocks(markdown: str, max_length: int = 1800):
     ]
 
 
+def get_youtube_title(video_id: str, default_title: str = "Untitled Video") -> str:
+    """
+    YouTube video_id로 oEmbed API를 통해 제목을 가져옵니다.
+    실패 시 default_title 반환.
+    """
+    try:
+        import requests
+
+        clean_url = f"https://www.youtube.com/watch?v={video_id}"
+        oembed_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
+        resp = requests.get(oembed_url)
+        if resp.status_code == 200:
+            json = resp.json()
+            return json.get("title", default_title)
+    except Exception:
+        pass
+    return default_title
+
+
 def save_to_notion_as_page(summary: str):
     token = st.session_state.notion_token
     database_id = st.session_state.notion_db_id
@@ -286,18 +305,7 @@ def save_to_notion_as_page(summary: str):
             from youtube_utils import extract_video_id
 
             video_id = extract_video_id(yt_url)
-            # oEmbed API로 YouTube 제목 가져오기
-            try:
-                import requests
-
-                clean_url = f"https://www.youtube.com/watch?v={video_id}"
-                oembed_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
-                resp = requests.get(oembed_url)
-                if resp.status_code == 200:
-                    json = resp.json()
-                    video_title = json.get("title", video_title)
-            except Exception:
-                pass
+            video_title = get_youtube_title(video_id, video_title)
 
         blocks = []
 
