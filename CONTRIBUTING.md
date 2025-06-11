@@ -3,8 +3,6 @@
 본 문서는 프로젝트에 기여하기 위한 가이드라인을 설명합니다.  
 코드 스타일, 협업 프로세스, 기술적 요구사항 등을 반드시 준수해 주세요.
 
----
-
 ## 개발 환경 설정
 
 ### 1. 필수 도구
@@ -35,8 +33,6 @@ GOOGLE_API_KEY=your_google_api_key_here
 OPEN_AI_API_KEY=your_openai_api_key_here
 APIFY_API_TOKEN=your_apify_api_token_here
 ```
-
----
 
 ## 코드 스타일 및 린팅
 
@@ -83,7 +79,6 @@ ruff check .
 ruff check . --fix
 ```
 
----
 
 ## 브랜치 전략
 
@@ -102,8 +97,6 @@ ruff check . --fix
 - 이슈 번호 포함 권장 (예: `feature/goat-123-summary`)
 - 영문 소문자, 숫자, 하이픈(`-`)만 사용
 - 쉽표는 사용하지 않음
-
----
 
 ## 협업 프로세스
 
@@ -141,8 +134,6 @@ git checkout -b feature/new-feature
 git push origin feature/new-feature
 ```
 
----
-
 ## 풀 리퀘스트(Pull Request) 가이드
 
 ### 1. PR 생성 조건
@@ -161,7 +152,6 @@ git branch -d feature/new-feature
 git push origin --delete feature/new-feature
 ```
 
----
 
 ## GitHub 규칙
 
