@@ -88,32 +88,40 @@ docker run -p 8501:8501 --env-file src/.env goathub-app
 
 # 사용 방법
 
+## 화면 구성
+
+프로젝트를 실행시키면, 다음과 같은 웹 추기 화면을 확인할 수 있습니다.
+
+![초기 화면](./docs/attachment/readme_initial-screen.png)
+
 ## 세팅
 
 ### 유튜브 링크 입력
 
 요약하고자 하는 유튜브 영상의 링크를 입력합니다.
 
-![유튜브 링크 입력]()
+![유튜브 링크 입력](./docs/attachment/readme_youtube-link-input.png)
 
 ### Notion 설정 입력
 
 자신의 노션 API와, 저장할 노션 데이터베이스 링크를 입력합니다.
 
-![Notion 설정 입력]()
+![Notion 설정 입력](./docs/attachment/readme_notion-config-input.png)
 
 
 ## 요약
 
 ### 대본 추출
 
-유튜브 링크를 입력하면 오른쪽 하단에 추출된 영상 대본이 표시됩니다.
+유튜브 링크를 입력하면 오른쪽 하단에 유튜브 영상과 함께 추출된 영상 대본이 표시됩니다.
+
+![대본 추출](./docs/attachment/readme_script-output.png)
 
 ### 핵심 요약
 
 `핵심 요약` 섹션에서 `핵심 요약 생성` 버튼을 클릭하면 일반적인 요약 노트가 생성됩니다.
 
-![핵심 요약]()
+![핵심 요약](./docs/attachment/readme_youtube-summary-output.png)
 
 ### 섹션별 요약
 
@@ -121,13 +129,13 @@ docker run -p 8501:8501 --env-file src/.env goathub-app
 
 대본에서 섹션을 나눠서 요약하기 때문에 **길이가 긴 영상을 요약하고자 하는 경우** 유용합니다.
 
-![섹션별 요약]()
+![섹션별 요약](./docs/attachment/readme_youtube-section-output.png)
 
 ### AI 채팅
 
 `AI 채팅` 부분에서 영상 요약을 기반으로한 챗봇과 대화할 수 있습니다.
 
-![AI 채팅]()
+![AI 채팅](./docs/attachment/readme_youtube-chatai-output.png)
 
 
 ## 요약 설정
@@ -138,34 +146,34 @@ docker run -p 8501:8501 --env-file src/.env goathub-app
 
 `모델 제공자 선택`은 `Google Gemini`와 `OpenAI GPT`의 두가지 선택지를 제시하며, `요약 모델 선택`에서 세부적인 모델을 선택 가능합니다.
 
-![요약 AI 선택]()
+![요약 AI 선택](./docs/attachment/readme_ai-model-select.png)
 
 ### 요약 언어 선택
 
 `요약 언어 선택`에서 요약 노트를 어떤 언어로 생성할 지 선택할 수 있습니다. 한국어를 포함한 7가지 언어를 제공합니다.
 
-![요약 언어 선택]()
+![요약 언어 선택](./docs/attachment/readme_language-change.png)
 
 ### 요약 길이 제한
 
 `요약 길이 제한` 항목을 체크할 경우 요약 길이를 수정할 수 있는 옵션이 나타납니다. 문자수 200 이상의 값으로 설정할 수 있습니다.
 
-![요약 길이 제한]()
+![요약 길이 제한](./docs/attachment/readme_summary-length.png)
 
 
 ## 추가 작업
 
 ### 요약 노트 다운로드
 
-생성된 요약 노트에 대해 `.md` 형식으로 다운로드할 수 있습니다.
+`핵심 요약`과 `섹션별 요약`에서 생성된 요약 노트에 대해 `.md` 형식으로 다운로드할 수 있습니다.
 
-![요약 노트 다운로드]()
+![요약 노트 다운로드](./docs/attachment/readme_md-save.png)
 
 ### Notion 저장
 
 생성된 요약 노트를 Notion 설정에 따라 사용자가 입력한 Notion 데이터베이스에 저장할 수 있습니다.
 
-![Notion 저장]()
+![Notion 저장](./docs/attachment/readme_notion-save.png)
 
 # 프로젝트 기여 방법
 
