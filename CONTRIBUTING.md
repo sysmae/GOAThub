@@ -28,10 +28,12 @@ pip install -r requirements.txt
 
 ### 4. 환경 변수 설정
 
-`.env` 파일을 프로젝트 루트 디렉토리에 만들고 API key를 입력하세요.
+`.env` 파일을 프로젝트 `app.py`가 존재하는 디렉터리에 생성하고 API key를 입력하세요.
 
 ```env
-GOOGLE_API_KEY=your-google-api-key
+GOOGLE_API_KEY=your_google_api_key_here
+OPEN_AI_API_KEY=your_openai_api_key_here
+APIFY_API_TOKEN=your_apify_api_token_here
 ```
 
 ---

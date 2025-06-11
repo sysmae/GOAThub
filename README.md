@@ -1,9 +1,11 @@
-# GOATube
-
-## 프로젝트 개요
+# 프로젝트 개요
 
 **팀명:** GOATHub  
+
 **프로젝트 제목:** GOATube  
+
+**Github:** https://github.com/sysmae/GOAThub
+
 **목적:**  
 유튜브 영상 링크를 입력받아 대본을 추출하고, 요약 노트를 생성하며,
 이를 노션에 저장할 수 있는 서비스입니다.  
@@ -16,8 +18,6 @@
 - **이정우:** API 통합 및 데이터 처리, 프롬프트 엔지니어링
 - **김경훈:** 소스코드 관리, 문서화, 발표
 
----
-
 ## 기술 스택
 
 - **프론트엔드:** Streamlit
@@ -26,29 +26,150 @@
 - **배포:** Streamlit Cloud -> AWS EC2 (Docker)
 - **협업 도구:** GitHub, Notion, Perplexity Space
 
----
 
 ## 주요 기능 (MVP 목표)
 
-- 유튜브 링크 입력 → 대본 추출
-- 대본 요약 및 노트 생성
-- 노션에 저장
-- 모델 선택, 요약 길이, 언어 선택 가능
+- [x] 유튜브 링크 입력 → 대본 추출
+- [x] 대본 요약 및 노트 생성
+- [x] 노션에 저장
+- [x] 모델 선택, 요약 길이, 언어 선택 가능
 
 ## MVP 핵심 기능
 
-- 직관적 UI 제공 (Streamlit)
-- 유튜브 영상 링크 입력 후, 대본 추출 및 요약
-- 노션 저장 기능 연동
+- [x] 직관적 UI 제공 (Streamlit)
+- [x] 유튜브 영상 링크 입력 후, 대본 추출 및 요약
+- [x] 노션 저장 기능 연동
 
 ## 향후 확장 고려 기능
 
-- 긴 영상 대본 섹션별 요약
-- 모델 등 사용자 맞춤형 옵션 제공
-- 다국어 지원 (한국어, 영어 등)
-- 챗봇 기능 등
+- [x] 긴 영상 대본 섹션별 요약
+- [x] 모델 등 사용자 맞춤형 옵션 제공
+- [x] 다국어 지원 (한국어, 영어 등)
+- [x] 챗봇 기능 등
 
----
+# 프로젝트 설치 및 실행
+
+## 개발 및 실행 환경 설정
+
+1. **필수 패키지 설치**
+
+실행에 필요한 필수 모듈을 설치하기위해 프로젝트 디렉터리 위치의 터미널에서 아래 명령어를 실행시켜주세요.
+
+```bash
+pip install -r requirements.txt
+```
+
+2. **환경 변수 설정**
+
+`.env` 파일을 프로젝트 `app.py`가 존재하는 디렉터리에 생성하고 API key를 입력하세요.
+
+```env
+GOOGLE_API_KEY=your_google_api_key_here
+OPEN_AI_API_KEY=your_openai_api_key_here
+APIFY_API_TOKEN=your_apify_api_token_here
+```
+
+## 프로젝트 실행 방법
+
+프로젝트를 실행하기 전 `개발 및 실행 환경 설정`을 선행해주세요.
+
+1. **실행 명렁어**
+
+```bash
+streamlit run src/app.py
+```
+
+2. **도커 활용**
+
+```bash
+docker build -t goathub-app .
+docker run -p 8501:8501 --env-file src/.env goathub-app
+```
+
+# 사용 방법
+
+## 세팅
+
+### 유튜브 링크 입력
+
+요약하고자 하는 유튜브 영상의 링크를 입력합니다.
+
+![유튜브 링크 입력]()
+
+### Notion 설정 입력
+
+자신의 노션 API와, 저장할 노션 데이터베이스 링크를 입력합니다.
+
+![Notion 설정 입력]()
+
+
+## 요약
+
+### 대본 추출
+
+유튜브 링크를 입력하면 오른쪽 하단에 추출된 영상 대본이 표시됩니다.
+
+### 핵심 요약
+
+`핵심 요약` 섹션에서 `핵심 요약 생성` 버튼을 클릭하면 일반적인 요약 노트가 생성됩니다.
+
+![핵심 요약]()
+
+### 섹션별 요약
+
+`섹션별 요약` 섹션에서 `섹션별 요약 생성` 버튼을 클릭하면 섹션별 요약 노트가 생성됩니다.
+
+대본에서 섹션을 나눠서 요약하기 때문에 **길이가 긴 영상을 요약하고자 하는 경우** 유용합니다.
+
+![섹션별 요약]()
+
+### AI 채팅
+
+`AI 채팅` 부분에서 영상 요약을 기반으로한 챗봇과 대화할 수 있습니다.
+
+![AI 채팅]()
+
+
+## 요약 설정
+
+### 요약 AI 선택
+
+요약 설정은 창의 왼쪽에서 설정할 수 있습니다.
+
+`모델 제공자 선택`은 `Google Gemini`와 `OpenAI GPT`의 두가지 선택지를 제시하며, `요약 모델 선택`에서 세부적인 모델을 선택 가능합니다.
+
+![요약 AI 선택]()
+
+### 요약 언어 선택
+
+`요약 언어 선택`에서 요약 노트를 어떤 언어로 생성할 지 선택할 수 있습니다. 한국어를 포함한 7가지 언어를 제공합니다.
+
+![요약 언어 선택]()
+
+### 요약 길이 제한
+
+`요약 길이 제한` 항목을 체크할 경우 요약 길이를 수정할 수 있는 옵션이 나타납니다. 문자수 200 이상의 값으로 설정할 수 있습니다.
+
+![요약 길이 제한]()
+
+
+## 추가 작업
+
+### 요약 노트 다운로드
+
+생성된 요약 노트에 대해 `.md` 형식으로 다운로드할 수 있습니다.
+
+![요약 노트 다운로드]()
+
+### Notion 저장
+
+생성된 요약 노트를 Notion 설정에 따라 사용자가 입력한 Notion 데이터베이스에 저장할 수 있습니다.
+
+![Notion 저장]()
+
+# 프로젝트 기여 방법
+
+`README`에서는 간략한 개요만 전달합니다. 추가적인 세부 사항은 `CONTRIBUTING.md`를 확인해주세요.
 
 ## 프로젝트 진행 방법
 
@@ -76,94 +197,9 @@ git push origin feature/기능명
    GitHub에서 `main` 대상 PR 생성 후, 리뷰 및 승인받기  
    (자동 린트 검사, 테스트 통과 필수)
 
----
-
-## 실행법
-
-1. **실행 명렁어**
-
-```bash
-streamlit run src/app.py
-```
-
-2. **도커 활용**
-
-```bash
-docker build -t goathub-app .
-docker run -p 8501:8501 --env-file src/.env goathub-app
-```
-
----
 
 ## 기여 방법
 
 - 이슈 등록 및 해결
 - 기능 개발 후 PR 요청
 - 코드 리뷰 후 머지
-
-
----
-
-#  DevOps 문서 요약
-
-## 📃 공식 문서 안내
-해당 프로젝트의 인프라 설정 및 배포와 관련된 상세 문서는 **Notion**에 정리되어 있습니다.  
-> GitHub에는 요약된 `.md` 파일만 포함되어 있으며, 이미지, 표, 스크린샷 등은 Notion 문서에서 확인해주세요.
-
----
-
-## 1. `doc/infra` - 인프라 구성 설정
-- [01. AWS 인스턴스 생성](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/01_aws_instance_create.md)
-- [02. Docker 설치 로그](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/02_docker_install_log.md)
-- [03. Docker Compose 설치](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/03_docker_compose_instal1.md)
-- [04. 도메인 매핑 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/04_domain_config.md)
-- [05. Dockerfile 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/05_Dockerfile.md)
-- [06. Nginx 리버스프록시 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/06_nginx_reverse_proxy.md)
-- [07. docker-compose.yml 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/07_docker_compose.md)
-- [08. HTTPS 인증서 (certbot) 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/08_https_certbot.md)
-- [09. 인증서 갱신 자동화 (cron)](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/09_https_cron.md)
-
----
-
-## 2. `doc/reference` - 팀원용 참조 문서
-- [01. Docker 설치가이드](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/01_Docker_install_guide.md)
-- [02. Docker Concept](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/02_Docker_Concept.md)
-- [03. Docker Instruction](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/03_Docker_Instruction.md)
-
----
-
-## 3. `doc/security` - 보안 정책 및 설정
-- [01. EC2 인바운드 보안 그룹 규칙](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/01_ec2_inbound_rule_config.md)
-- [02. GitHub Secrets 및 환경변수 관리](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/02_github_secret_management.md)
-- [03. SSH Key 및 인증서 설정 가이드](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/03_ssh_key_management.md)
-
----
-
-## 4. `doc/test` - 서버 동작 및 컨테이너 체크
-- [01. 컨테이너 및 서버 동작 테스트](https://github.com/sysmae/GOAThub/blob/main/doc/04_test/01_Docker_container_running_cehck.md)
-
----
-
-## 5. `doc/deploy` - 배포 자동화 및 GitHub Actions 구성
-- [01. GitHub 기반 배포 pipeline 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/01_deploy_with_github.md)
-- [02. DockerHub 기반 배포 pipeline 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/02_deploy_with_dockerhub.md)
-- [03. 태그 기반 배포 + 로그 작성 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/03_tag_triggered_deploy_with_logging.md)
-- [04. deploy.yml 스크립트 설명](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/04_deploy.yml_explained.md)
-- [05. 블루-그린 무중단 배포 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/05_blue_green_deployment_with_zero_downtime.md)
-
----
-
-## 6. `doc/troubleshooting` - 문제 해결 기록
-- [01. Webshare 프록시 직접 설정 시도 (실패)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/01_youtubeapi_trouble_forward_proxy_network_setting.md)  
-  → 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도. 네트워크 제한으로 실패.
-
-- [02. 역방향 SSH 프록시 우회 실험 (라우터 차단으로 실패)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/02_youtubeapi_trouble_reverse_ssh_tunnerling_network_setting.md)  
-  → EC2 → 로컬 PC 간 역방향 SSH 터널링 구성 실험. 라우터 차단으로 트래픽 전달 실패.
-
-- [03. EC2 내 Squid 구성 및 프록시 트래픽 점검 및 디버깅](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/03_youtubeapi_trouble_debugging.md)  
-  → Squid 서버 자체 구성 후 단계별 흐름 분석, 통신 경로/방화벽 점검 등 디버깅.
-
-- [04. residential 프록시 교체 및 메인 코드 수정 (성공)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/04_youtubeapi_trouble_residental_proxy.md)  
-  → SSH 역방향 프록시 해제 후 포워드 프록시 구조로 변경. API 정상 통신 확인.
-
----
