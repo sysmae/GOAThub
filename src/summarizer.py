@@ -10,14 +10,16 @@ from langchain.prompts.chat import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
-from constant import LANG_CODE_TO_LANGNAME, LANG_OPTIONS, UI_LABELS
+from constant import LANG_OPTIONS, SUMMARY_LENGTH_MAX, SUMMARY_LENGTH_MIN, UI_LABELS
 
 
 # 다국어 프롬프트 템플릿
+# 만약 summary_length가 None이면 원래 프롬프트 사용
 def get_prompt(lang_code):
     lang_map = {v: k for k, v in LANG_OPTIONS.items()}  # 코드:이름 형태로 변환
     if lang_code not in lang_map:
         raise ValueError(f"지원하지 않는 언어 코드: {lang_code}")
+
     if lang_code == "ko":
         return """
 # 📑 유튜브 대본을 계층적·시각적 Markdown 요약으로 변환하는 프롬프트
@@ -279,7 +281,7 @@ Résumez le texte suivant en utilisant la structure Markdown ci-dessous.
 - Principales sections** : `##` + emoji + mots clés.
 - Sous-titres** : `####` + no. Mots-clés.
 - Détails : organisés avec des puces (-), ajouter des sous-thèmes si nécessaire.
-- Hiérarchiser au moins à trois niveaux
+- Hiérarchiser au moins trois niveaux
 - Gras pour les termes importants, _italique_ pour les chiffres/années/conclusions clés**.
 
 ### 2. Visuels
@@ -446,6 +448,107 @@ Un resumen en formato markdown:
         """
 
 
+# 만약 summary_length가 None이 아니면, 요약 길이 설정 프롬프트 추가
+def get_prompt_with_length(lang_code, summary_length):
+    base_prompt = get_prompt(lang_code)
+    if summary_length and SUMMARY_LENGTH_MIN <= summary_length <= SUMMARY_LENGTH_MAX:
+        if lang_code == "ko":
+            length_msg = f"# 요약 길이 제한\n- 전체 요약은 반드시 {summary_length}자 이내로 작성하세요.\n(마크다운 태그 포함)\n짧은 요약이 필요하다면 구조화된 요약 대신 간단한 요약을 고려하세요."
+        elif lang_code == "en":
+            length_msg = f"# Summary Length Limit\n- The entire summary must be within {summary_length} characters.\n(including markdown tags)\nIf a shorter summary is needed, consider a simple summary instead of a structured one."
+        elif lang_code == "ja":
+            length_msg = f"# 要約の長さ制限\n- 全体の要約は必ず{summary_length}文字以内で作成してください。\n（Markdownタグを含む）\n短い要約が必要な場合は、構造化された要約の代わりに簡単な要約を検討してください。"
+        elif lang_code == "zh":
+            length_msg = f"# 摘要长度限制\n- 整个摘要必须控制在{summary_length}个字符以内。\n（包括Markdown标签）\n如果需要更短的摘要，请考虑使用简单摘要而不是结构化摘要。"
+        elif lang_code == "fr":
+            length_msg = f"# Limite de longueur du résumé\n- Le résumé complet doit comporter au maximum {summary_length} caractères.\n(incluant les balises Markdown)\nSi un résumé plus court est nécessaire, envisagez un résumé simple plutôt qu'un résumé structuré."
+        elif lang_code == "de":
+            length_msg = f"# Zusammenfassungslängenbegrenzung\n- Die gesamte Zusammenfassung darf maximal {summary_length} Zeichen umfassen.\n(einschließlich Markdown-Tags)\nWenn eine kürzere Zusammenfassung erforderlich ist, ziehen Sie eine einfache Zusammenfassung anstelle einer strukturierten in Betracht."
+        elif lang_code == "es":
+            length_msg = f"# Límite de longitud del resumen\n- El resumen completo debe tener un máximo de {summary_length} caracteres.\n(incluyendo etiquetas Markdown)\nSi se necesita un resumen más corto, considere un resumen simple en lugar de uno estructurado."
+        else:
+            length_msg = f"# Summary Length Limit\n- The entire summary must be within {summary_length} characters.\n(including markdown tags)\nIf a shorter summary is needed, consider a simple summary instead of a structured one."
+        # 길이 제한 프롬프트를 base_prompt의 가장 앞에 배치
+        return length_msg + base_prompt
+    else:
+        return base_prompt
+
+
+# 언어별 섹션 요약 프롬프트 반환 함수 추가
+def get_section_summary_prompt(lang_code, idx, chunk):
+    if lang_code == "ko":
+        return f"""아래는 전체 대본의 {idx + 1}번째 섹션입니다.
+이 섹션의 모든 중요한 정보, 주장, 연결고리를 빠짐없이 유지하며 자세히 요약하세요.
+- 반드시 한국어로 출력하세요.
+- 주요 주제와 주장, 중요한 세부사항과 예시, 다른 주제와의 연결, 핵심 결론을 모두 포함하세요.
+
+텍스트:
+{chunk}
+"""
+    elif lang_code == "en":
+        return f"""Below is section {idx + 1} of the full transcript.
+Create a detailed summary, maintaining all important information, arguments, and connections.
+- Must output in English.
+- Include all main topics, arguments, important details, examples, connections, and key conclusions.
+
+Text:
+{chunk}
+"""
+    elif lang_code == "ja":
+        return f"""以下は全体スクリプトの第{idx + 1}セクションです。
+このセクションの重要な情報、主張、つながりをすべて維持し、詳細に要約してください。
+- 必ず日本語で出力してください。
+- 主なトピック、主張、重要な詳細、例、他のトピックとの関連、重要な結論をすべて含めてください。
+
+テキスト:
+{chunk}
+"""
+    elif lang_code == "zh":
+        return f"""以下是完整脚本的第{idx + 1}部分。
+请详细总结本部分内容，保留所有重要信息、论点和联系。
+- 必须用中文输出。
+- 包含所有主要主题、论点、重要细节、示例、与其他主题的联系和关键结论。
+
+文本:
+{chunk}
+"""
+    elif lang_code == "fr":
+        return f"""Voici la section {idx + 1} du script complet.
+Faites un résumé détaillé en conservant toutes les informations importantes, arguments et liens.
+- Répondez impérativement en français.
+- Incluez tous les sujets principaux, arguments, détails importants, exemples, liens et conclusions clés.
+
+Texte :
+{chunk}
+"""
+    elif lang_code == "de":
+        return f"""Nachfolgend Abschnitt {idx + 1} des vollständigen Skripts.
+Erstellen Sie eine ausführliche Zusammenfassung unter Beibehaltung aller wichtigen Informationen, Argumente und Zusammenhänge.
+- Antworten Sie unbedingt auf Deutsch.
+- Fügen Sie alle Hauptthemen, Argumente, wichtige Details, Beispiele, Verbindungen und Schlussfolgerungen ein.
+
+Text:
+{chunk}
+"""
+    elif lang_code == "es":
+        return f"""A continuación se muestra la sección {idx + 1} del guion completo.
+Cree un resumen detallado manteniendo toda la información importante, argumentos y conexiones.
+- Debe responder en español.
+- Incluya todos los temas principales, argumentos, detalles importantes, ejemplos, conexiones y conclusiones clave.
+
+Texto:
+{chunk}
+"""
+    else:
+        # 기본값: 영어
+        return f"""Below is section {idx + 1} of the full transcript.
+Create a detailed summary, maintaining all important information, arguments, and connections.
+
+Text:
+{chunk}
+"""
+
+
 def split_text_into_chunks(text, chunk_size=10000, overlap=1000):
     """
     텍스트를 단어 단위로 청크로 분할 (overlap은 문자수 기준)
@@ -468,6 +571,250 @@ def split_text_into_chunks(text, chunk_size=10000, overlap=1000):
     return chunks
 
 
+# 언어별 전체 요약 프롬프트 반환 함수 추가
+def get_final_summary_prompt(lang_code, combined_summary):
+    if lang_code == "ko":
+        return f"""
+아래 내용을 계층적이고 시각적으로 구조화된 Markdown 요약으로 변환하세요.
+
+- 반드시 한국어로 출력하세요.
+- 아래의 구조와 스타일 가이드를 반드시 따르세요.
+
+## 구조 및 포맷
+- 최상위 제목: # + 영상 핵심 주제 (이모지 포함)
+- 주요 섹션: ## + 이모지 + 핵심 키워드
+- 하위 항목: ### + 번호. 키워드
+- 세부 내용: 불릿포인트(–)로 정리, 필요시 소주제 추가
+- 최소 3단계 이상 계층화
+- 중요한 용어는 굵게, 수치/연도/핵심 결과는 _기울임_ 처리
+
+## 시각적 요소
+- 각 섹션/항목에 어울리는 이모지 활용
+- 복잡한 관계/흐름은 mermaid, 표, 타임라인 등 Markdown 요소로 시각화
+
+## 서술 스타일
+- 객관적·설명체, 학술적 톤
+- 불필요한 감상/광고/사족 배제
+- 핵심 정보 위주로 간결하게 정리
+
+요약할 내용:
+{combined_summary}
+
+누구나 원본을 보지 않아도 이해할 수 있도록 시각적으로 잘 정리하세요.
+
+---
+"""
+    elif lang_code == "en":
+        return f"""
+Please convert the following content into a hierarchical and visually structured Markdown summary in English.
+
+Follow these instructions and formatting rules:
+
+- Structure and formatting:
+  - Top Title: Use # followed by Video Key Topics (with emoji).
+  - Main sections: Use ## with emoji and key words.
+  - Subheadings: Use ### with numbers and keywords.
+  - Details: Organize with bullet points (-), add subtopics as needed.
+  - Hierarchize at least three levels.
+  - Use bold for important terms, and italics for numbers/years/key findings.
+
+- Visuals:
+  - Use emojis in every section and subsection title.
+  - Visualize complex relationships or flows using mermaid, tables, timelines, etc.
+
+- Writing style:
+  - Output must be in English.
+  - Avoid unnecessary opinions, advertisements, or non-essential commentary.
+  - Summarize information objectively and concisely, focusing on key points.
+  - Ensure all major content from the original is included and logically structured.
+
+Text to summarize:
+{combined_summary}
+
+Make sure the summary is comprehensive and visually organized, so that someone who hasn't seen the original content can fully understand it.
+
+---
+"""
+    elif lang_code == "ja":
+        return f"""
+以下の内容を階層的かつ視覚的に構造化されたMarkdown要約に変換してください。
+
+- 必ず日本語で出力してください。
+- 以下の構造とスタイルガイドに従ってください。
+
+## 構造とフォーマット
+- トップタイトル: # + キートピック（絵文字付き）
+- 主なセクション: ## + 絵文字 + キーワード
+- 小見出し: ### + 番号. キーワード
+- 詳細: 箇条書き（-）、必要に応じてサブトピック追加
+- 最低3階層以上
+- 重要語は太字、数字/年/重要結果は_斜体_
+
+## ビジュアル
+- 各セクション/項目に絵文字活用
+- 複雑な関係や流れはmermaid、表、タイムライン等で視覚化
+
+## 文体
+- 客観的・説明的・学術的トーン
+- 不要な感想/広告/蛇足は排除
+- 重要情報を簡潔にまとめる
+
+要約対象:
+{combined_summary}
+
+誰でも元の内容을 보지 않아도 이해できるように視覚的に整理してください。
+
+---
+"""
+    elif lang_code == "zh":
+        return f"""
+请将以下内容转换为分层且可视化的Markdown摘要。
+
+- 必须用中文输出。
+- 遵循以下结构和风格指南。
+
+## 结构与格式
+- 顶部标题: # + 关键主题（带表情符号）
+- 主要部分: ## + emoji + 关键词
+- 子标题: ### + 编号. 关键词
+- 细节: 用圆点（-）组织，必要时添加子主题
+- 至少分三级
+- 重要术语加粗，数字/年份/主要发现用斜体
+
+## 视觉
+- 每个部分/项目使用表情符号
+- 复杂关系/流程用mermaid、表格、时间轴等可视化
+
+## 写作风格
+- 客观、描述性、学术性
+- 避免不必要的情绪/广告/赘述
+- 关键信息简明扼要
+
+需要总结的内容:
+{combined_summary}
+
+请确保摘要全面且结构清晰，让未看过原文的人也能理解。
+
+---
+"""
+    elif lang_code == "fr":
+        return f"""
+Veuillez convertir le contenu suivant en un résumé Markdown hiérarchisé et visuel en français.
+
+- Répondez impérativement en français.
+- Respectez la structure et le guide de style ci-dessous.
+
+## Structure et formatage
+- Titre principal: # + sujet clé (avec emoji)
+- Sections principales: ## + emoji + mots-clés
+- Sous-titres: ### + numéro. mots-clés
+- Détails: puces (-), sous-thèmes si nécessaire
+- Hiérarchisez sur au moins trois niveaux
+- Termes importants en gras, chiffres/années/résultats en _italique_
+
+## Visuels
+- Utilisez des émojis pour chaque section/sous-section
+- Visualisez les relations complexes avec mermaid, tableaux, chronologies, etc.
+
+## Style
+- Ton objectif, descriptif, académique
+- Pas d'opinions, de publicité ou d'inutiles commentaires
+- Résumez de façon concise et structurée
+
+Texte à résumer:
+{combined_summary}
+
+Le résumé doit être complet et visuel pour qu'une personne n'ayant pas vu l'original puisse tout comprendre.
+
+---
+"""
+    elif lang_code == "de":
+        return f"""
+Bitte wandeln Sie den folgenden Inhalt in eine hierarchisch und visuell strukturierte Markdown-Zusammenfassung auf Deutsch um.
+
+- Antworten Sie unbedingt auf Deutsch.
+- Befolgen Sie die unten stehende Struktur und Stilrichtlinien.
+
+## Struktur und Formatierung
+- Haupttitel: # + Kernthema (mit Emoji)
+- Hauptabschnitte: ## + Emoji + Schlüsselwörter
+- Zwischenüberschriften: ### + Nummer. Schlüsselwörter
+- Details: Aufzählungspunkte (-), ggf. Unterthemen hinzufügen
+- Mindestens drei Ebenen Hierarchie
+- Wichtige Begriffe fett, Zahlen/Jahre/Ergebnisse _kursiv_
+
+## Visuelle Elemente
+- Emojis in jedem Abschnitt und Unterabschnitt
+- Komplexe Beziehungen/Flüsse mit mermaid, Tabellen, Zeitachsen etc. visualisieren
+
+## Stil
+- Objektiv, beschreibend, akademisch
+- Keine Meinungen, Werbung oder unnötige Kommentare
+- Prägnant und strukturiert zusammenfassen
+
+Zusammenzufassender Text:
+{combined_summary}
+
+Die Zusammenfassung soll umfassend und visuell sein, damit auch Unbeteiligte alles verstehen.
+
+---
+"""
+    elif lang_code == "es":
+        return f"""
+Por favor, convierta el siguiente contenido en un resumen Markdown jerárquico y visual en español.
+
+- Debe responder en español.
+- Siga la estructura y guía de estilo a continuación.
+
+## Estructura y formato
+- Título principal: # + tema clave (con emoji)
+- Secciones principales: ## + emoji + palabras clave
+- Subtítulos: ### + número. palabras clave
+- Detalles: viñetas (-), subtemas si es necesario
+- Jerarquice al menos en tres niveles
+- Términos importantes en negrita, números/años/resultados en _cursiva_
+
+## Visuales
+- Use emojis en cada sección y subsección
+- Visualice relaciones complejas con mermaid, tablas, líneas de tiempo, etc.
+
+## Estilo de redacción
+- Tono objetivo, descriptivo y académico
+- Evite sentimientos/opiniones/publicidad innecesarios
+- Organice de forma concisa la información clave
+- Utilice el pasado para verbos como «era», etc.
+
+### 4. Ejemplos
+# 💡 Crecimiento y retos de Tesla
+### 1. 🚗 Fundación y visión de Tesla
+- Elon Musk fundó Tesla en *2003*.
+- Su objetivo era popularizar los vehículos eléctricos.
+## 1.1. Inversión inicial y desarrollo tecnológico
+- Lanzó el primer modelo, el Roadster, en 2008.
+- Lideró la innovación en tecnología de baterías.
+## 2. 📈 Expansión del mercado y estrategia de producción
+- Estableció Gigafactory para *3x* aumentar la capacidad de producción.
+- Entró con éxito en el mercado de masas con el lanzamiento del Model 3.
+`texttimeline
+    2003 : Fundada
+    2008: Lanzamiento del Roadster
+    2017: Lanzamiento del Model 3`
+---]
+
+## 🟨 Notas
+- Incluye estructuralmente todos los puntos clave del guión del vídeo sin que falte nada
+- Asegúrate de incluir emojis, jerarquías, visualizaciones, etc.
+- Sin anuncios, sentimentalismos innecesarios, etc.
+
+--- --- --- ------.
+Resume el guión siguiendo la guía anterior.
+
+{combined_summary}
+
+Un resumen en formato markdown:
+"""
+
+
 def summarize_sectionwise(
     text: str,
     model: str,
@@ -477,31 +824,14 @@ def summarize_sectionwise(
 ) -> str:
     lang_code = st.session_state.get("selected_lang", "ko")
     LABELS = UI_LABELS.get(lang_code, UI_LABELS["ko"])
-    language = LANG_CODE_TO_LANGNAME.get(lang_code, "Korean")
     chunks = split_text_into_chunks(text, chunk_size=chunk_size, overlap=overlap)
     intermediate_summaries = []
+
     # 1. 섹션별 요약 생성
-    if "gemini" in model:
-        if not api_key:
-            return LABELS["missing_api_key"].format("Google Gemini")
-        llm = ChatGoogleGenerativeAI(
-            model=model,
-            temperature=0,
-            google_api_key=api_key,
-        )
+    def summarize_chunks(llm):
         for idx, chunk in enumerate(chunks):
             st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
-            prompt = f"""Create a detailed summary of section {idx + 1}.
-Must output in {language}.
-Maintain all important information, arguments, and connections.
-Pay special attention to:
-- Main topics and arguments
-- Important details and examples
-- Connections with other mentioned topics
-- Key statements and conclusions
-
-Text: {chunk}
-"""
+            prompt = get_section_summary_prompt(lang_code, idx, chunk)
             docs = [Document(page_content=prompt)]
             try:
                 summary = load_summarize_chain(
@@ -513,40 +843,19 @@ Text: {chunk}
             except Exception as e:
                 summary = f"{LABELS['summary_error']}: {e}"
             intermediate_summaries.append(summary)
+
+    if "gemini" in model:
+        if not api_key:
+            return LABELS["missing_api_key"].format("Google Gemini")
+        llm = ChatGoogleGenerativeAI(
+            model=model,
+            temperature=0,
+            google_api_key=api_key,
+        )
+        summarize_chunks(llm)
         st.toast(LABELS["sectionwise_done"], icon="🎉")
         combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
-        final_prompt = f"""
-Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
-
-Follow these instructions and formatting rules:
-
-- Structure and formatting.
-  - Top Title: Use # followed by Video Key Topics (with emoji).
-  - Main sections: Use ## with emoji and key words.
-  - Subheadings: Use #### with numbers and keywords.
-  - Details: Organize with bullet points (-), add subtopics as needed.
-  - Hierarchize at least three levels.
-  - Use bold for important terms, and italics for numbers/years/key findings.
-
-- Use the following variable structure for each section:
-  - 🎯 Main Title: Use a descriptive, emoji-enhanced main title summarizing the core topic.
-  - 📝 Overview: Provide a concise (2-3 sentences) context and main purpose.
-  - 🔑 Key Points: Extract and explain the main arguments, with at least three levels of structure. Combine each section title with a relevant emoji and keyword. Use bold for important terms and _italics_ for key figures, years, or results. Add subtopics as needed.
-  - 💡 Takeaways: List 3-5 practical insights, explaining their significance.
-
-- Style and Visual Guide:
-  - Output must be in {language}.
-  - Use emojis in every section and subsection title.
-  - Avoid unnecessary opinions, advertisements, or non-essential commentary.
-  - Summarize information objectively and concisely, focusing on key points.
-  - Ensure all major content from the original is included and logically structured.
-
-Text to summarize: {combined_summary}
-
-Make sure the summary is comprehensive and visually organized, so that someone who hasn't seen the original content can fully understand it.
-
----
-"""
+        final_prompt = get_final_summary_prompt(lang_code, combined_summary)
         docs = [Document(page_content=final_prompt)]
         try:
             overall_summary = load_summarize_chain(
@@ -569,64 +878,10 @@ Make sure the summary is comprehensive and visually organized, so that someone w
             temperature=0,
             openai_api_key=api_key,
         )
-        for idx, chunk in enumerate(chunks):
-            st.toast(f"🔄 섹션별 요약 진행 중: {idx + 1}/{len(chunks)}", icon="⏳")
-            prompt = f"""Create a detailed summary of section {idx + 1}.
-Must output in {language}.
-Maintain all important information, arguments, and connections.
-Pay special attention to:
-- Main topics and arguments
-- Important details and examples
-- Connections with other mentioned topics
-- Key statements and conclusions
-
-Text: {chunk}
-"""
-            docs = [Document(page_content=prompt)]
-            try:
-                summary = load_summarize_chain(
-                    llm=llm,
-                    chain_type="stuff",
-                    prompt=PromptTemplate(template="{text}", input_variables=["text"]),
-                    verbose=False,
-                ).run(docs)
-            except Exception as e:
-                summary = f"{LABELS['summary_error']}: {e}"
-            intermediate_summaries.append(summary)
+        summarize_chunks(llm)
         st.toast(LABELS["sectionwise_done"], icon="🎉")
         combined_summary = "\n\n=== Next Section ===\n\n".join(intermediate_summaries)
-        final_prompt = f"""
-Please convert the following content into a hierarchical and visually structured Markdown summary in {language}.
-
-Follow these instructions and formatting rules:
-
-- Structure and formatting.
-  - Top Title: Use # followed by Video Key Topics (with emoji).
-  - Main sections: Use ## with emoji and key words.
-  - Subheadings: Use #### with numbers and keywords.
-  - Details: Organize with bullet points (-), add subtopics as needed.
-  - Hierarchize at least three levels.
-  - Use bold for important terms, and italics for numbers/years/key findings.
-
-- Use the following variable structure for each section:
-  - 🎯 Main Title: Use a descriptive, emoji-enhanced main title summarizing the core topic.
-  - 📝 Overview: Provide a concise (2-3 sentences) context and main purpose.
-  - 🔑 Key Points: Extract and explain the main arguments, with at least three levels of structure. Combine each section title with a relevant emoji and keyword. Use bold for important terms and _italics_ for key figures, years, or results. Add subtopics as needed.
-  - 💡 Takeaways: List 3-5 practical insights, explaining their significance.
-
-- Style and Visual Guide:
-  - Output must be in {language}.
-  - Use emojis in every section and subsection title.
-  - Avoid unnecessary opinions, advertisements, or non-essential commentary.
-  - Summarize information objectively and concisely, focusing on key points.
-  - Ensure all major content from the original is included and logically structured.
-
-Text to summarize: {combined_summary}
-
-Make sure the summary is comprehensive and visually organized, so that someone who hasn't seen the original content can fully understand it.
-
----
-"""
+        final_prompt = get_final_summary_prompt(lang_code, combined_summary)
         docs = [Document(page_content=final_prompt)]
         try:
             overall_summary = load_summarize_chain(
@@ -662,6 +917,7 @@ def summarize(
     text: str,
     model: str,
     api_key: str = None,
+    summary_length: int = None,
 ) -> str:
     import google.api_core.exceptions
 
@@ -676,7 +932,10 @@ def summarize(
             temperature=0,
             google_api_key=api_key,
         )
-        original_template = get_prompt(lang_code)
+        if not summary_length:
+            original_template = get_prompt(lang_code)
+        else:
+            original_template = get_prompt_with_length(lang_code, summary_length)
         system_msg = """
         You are a helpful assistant.
         Always respond in valid Markdown format.
@@ -705,7 +964,10 @@ def summarize(
     elif "gpt" in model:
         if not api_key:
             return LABELS["missing_api_key"].format("OpenAI")
-        prompt_template = get_prompt(lang_code)
+        if summary_length:
+            prompt_template = get_prompt_with_length(lang_code, summary_length)
+        else:
+            prompt_template = get_prompt(lang_code)
         PROMPT = PromptTemplate(template=prompt_template, input_variables=["text"])
         llm = ChatOpenAI(
             model=model,

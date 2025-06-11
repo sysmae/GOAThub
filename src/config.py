@@ -3,6 +3,8 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
+from constant import SUMMARY_LENGTH_MAX, SUMMARY_LENGTH_MIN
+
 
 def load_dotenv_and_session(localS):
     load_dotenv()
@@ -23,6 +25,20 @@ def load_dotenv_and_session(localS):
         st.session_state["gemini_api_key"] = os.getenv("GOOGLE_API_KEY", "")
     if "openai_api_key" not in st.session_state or not st.session_state["openai_api_key"]:
         st.session_state["openai_api_key"] = os.getenv("OPEN_AI_API_KEY", "")
+    if "use_summary_length" not in st.session_state:
+        val = localS.getItem("use_summary_length")
+        st.session_state["use_summary_length"] = (
+            val == "true" if isinstance(val, str) else bool(val)
+        )
+    if "summary_length" not in st.session_state:
+        try:
+            val = int(localS.getItem("summary_length"))
+            if SUMMARY_LENGTH_MIN <= val <= SUMMARY_LENGTH_MAX:
+                st.session_state["summary_length"] = val
+            else:
+                st.session_state["summary_length"] = 0
+        except Exception:
+            st.session_state["summary_length"] = 0
 
 
 def init_session():

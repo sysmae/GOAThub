@@ -1,8 +1,4 @@
-import datetime
-import os
 import re
-import uuid
-from typing import Any, Dict, List, Optional
 
 import google.generativeai as genai
 import streamlit as st
@@ -18,14 +14,17 @@ from config import (
     init_session,
     load_dotenv_and_session,
 )
-from constant import LANG_OPTIONS, UI_LABELS
+from constant import LANG_OPTIONS, SUMMARY_LENGTH_MAX, SUMMARY_LENGTH_MIN, UI_LABELS
 from notion_utils import (
     extract_notion_database_id,
     get_youtube_title,
     save_to_notion_as_page,
 )
 from summarizer import summarize, summarize_sectionwise
-from youtube_utils import extract_video_id, fetch_youtube_transcript_via_apify, get_transcript
+from youtube_utils import (
+    extract_video_id,
+    get_transcript_with_fallback,
+)
 
 # LocalStorage 인스턴스 생성
 localS = LocalStorage()
@@ -125,14 +124,10 @@ def load_video(url):
     # 영상 ID가 바뀐 경우에만 업데이트
     if st.session_state.video_id != vid:
         try:
-            data = get_transcript(vid)
-        except Exception as e:
-            st.toast(f"{LABELS['transcript_fallback']} ({e})", icon="⚠️")
-            try:
-                data = fetch_youtube_transcript_via_apify(vid)
-            except Exception as e2:
-                st.error(f"{LABELS['transcript_fail']}: {e2}")
-                return
+            data = get_transcript_with_fallback(vid)
+        except Exception as e2:
+            st.error(f"{LABELS['transcript_fail']}: {e2}")
+            return
         txt = data.get("transcript", "")
         video_title = get_youtube_title(vid, "유튜브 영상")
 
@@ -146,7 +141,7 @@ def load_video(url):
                     "summarizing": False,
                     "summarized": False,
                     "notion_saved": False,
-                    "video_title": video_title,  # 영상 제목 저장
+                    "video_title": video_title,
                 }
             )
         else:
@@ -156,6 +151,12 @@ def load_video(url):
 # === 요약 실행 ===
 def run_summary():
     with st.spinner(LABELS["summarizing"]):
+        # use_summary_length가 False면 summary_length=None
+        summary_length = (
+            st.session_state.get("summary_length")
+            if st.session_state.get("use_summary_length")
+            else None
+        )
         st.session_state.summary = summarize(
             st.session_state.get("transcript_text"),
             model=st.session_state.selected_model_id,
@@ -164,6 +165,7 @@ def run_summary():
                 if "gemini" in st.session_state.selected_model_id
                 else "openai_api_key"
             ),
+            summary_length=summary_length,
         )
         st.session_state.summarize_clicked = True
         # ✅ 자동 저장이 켜져 있으면 바로 Notion 저장
@@ -325,6 +327,43 @@ with st.sidebar:
     if st.session_state.get("last_lang") != st.session_state.selected_lang:
         st.session_state["last_lang"] = st.session_state.selected_lang
         st.rerun()
+    # === 요약 길이 제한 옵션 추가 ===
+    use_summary_length = st.checkbox(
+        LABELS.get("use_summary_length_label", "요약 길이 제한 사용"),
+        value=st.session_state.get("use_summary_length", False),
+        key="use_summary_length_checkbox",
+    )
+    st.session_state["use_summary_length"] = use_summary_length
+    localS.setItem("use_summary_length", use_summary_length, key="set_use_summary_length")
+
+    if use_summary_length:
+        default_len = int(st.session_state.get("summary_length", SUMMARY_LENGTH_MAX))
+        # NoneType 방지: None이거나 int가 아니면 기본값으로
+        if default_len is None or not isinstance(default_len, int):
+            default_len = 2000
+        try:
+            if not (SUMMARY_LENGTH_MIN <= default_len <= SUMMARY_LENGTH_MAX):
+                default_len = SUMMARY_LENGTH_MIN
+        except TypeError:
+            default_len = SUMMARY_LENGTH_MIN
+        summary_length = st.number_input(
+            LABELS.get("summary_length_label", "요약 길이 (문자수)"),
+            min_value=SUMMARY_LENGTH_MIN,
+            max_value=SUMMARY_LENGTH_MAX,
+            value=default_len,
+            step=50,
+            help=LABELS.get(
+                "summary_length_help",
+                f"{SUMMARY_LENGTH_MIN}~{SUMMARY_LENGTH_MAX}자 사이로 입력하세요. ",
+            ),
+            key="summary_length_input",
+        )
+        st.session_state["summary_length"] = summary_length
+        localS.setItem("summary_length", summary_length, key="set_summary_length")
+    else:
+        st.session_state["summary_length"] = None
+        localS.setItem("summary_length", None, key="set_summary_length")
+
 
 yt_url = st.text_input(LABELS["yt_input"], placeholder=LABELS["yt_input_placeholder"])
 if yt_url:
