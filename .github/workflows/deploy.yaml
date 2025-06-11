@@ -18,7 +18,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v3
 
-      # 2. Docker Buildx 설정 (도커 이미지의 효율적 생성을 위한 설정)
+      # 2. Docker Buildx 설정 (도커이미지의 효율적 생성을 위한 설정)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
