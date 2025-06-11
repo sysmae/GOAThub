@@ -153,6 +153,7 @@ git push origin feature/new-feature
 ### 2. 머지 후 처리
 
 - 브랜치 삭제 (로컬/원격)
+- 단 이번 프로젝트에서는 기록용으로 브랜치를 삭제하지 않음
 
 ```bash
 git branch -d feature/new-feature
