@@ -118,6 +118,10 @@ Was möchtest du wissen?""",
 ¿Qué te gustaría saber?""",
 }
 
+LABELS = UI_LABELS.get(st.session_state.get("selected_lang", "ko"), UI_LABELS["ko"])
+
+# Ensure LABELS is defined at the top of the file for global usage.
+
 
 class LangChainChatManager:
     def __init__(self):
@@ -385,7 +389,6 @@ def render_chat_tab():
     st.markdown("---")
     if st.button(LABELS["save_chat_notion"], key="save_chat_to_notion"):
         save_chat_to_notion()
-        st.success(LABELS["save_chat_notion_success"])
 
 
 def _initialize_chat_state():
@@ -663,4 +666,7 @@ def save_chat_to_notion():
         ts = msg["timestamp"].strftime("%Y-%m-%d %H:%M")
         lines.append(f"**{role}** ({ts})\n\n{msg['content']}\n")
     chat_md = "\n---\n".join(lines)
-    save_to_notion_as_page(chat_md)
+
+    # Save to Notion and handle success
+    if save_to_notion_as_page(chat_md):
+        st.success(LABELS["save_chat_notion_success"])
