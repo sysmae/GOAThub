@@ -43,7 +43,7 @@ jobs:
           docker push $IMAGE_NAME:$IMAGE_TAG
 
 
-      # 5.  SSH를 위해 개인키를 등록 및 권한설정, EC2 호스트 키 저장.
+      # 5.  SSH를 위해 개인키를 등록 및 권한설정, EC2 호스트 키 저장
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
@@ -51,7 +51,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 15.164.146.31 >> ~/.ssh/known_hosts
 
-      # 6. 로깅을 위한 commit 해쉬값 추출
+      # 6. 로깅을 위한 commit 해쉬값 추출.
       - name: Get short commit hash
         id: vars
         run: echo "SHORT_HASH=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
