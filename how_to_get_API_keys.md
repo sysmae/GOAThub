@@ -3,7 +3,8 @@
 GOATube 서비스를 실행하려면 다음 3종류의 API 키가 필요합니다:
 
 - **Google Generative AI (Gemini) API 키**
-- **Webshare 프록시 인증 정보** (선택 사항)
+- **OpenAI API 키**
+- **Apify API 토큰**
 - **Notion Integration Token** (앱 실행 후 입력)
 
 ## Google Generative AI API 키 (GOOGLE_API_KEY)
@@ -30,37 +31,42 @@ GOOGLE_API_KEY=your_google_api_key_here
 
 ---
 
-## Webshare 프록시 인증 정보
-
-(선택 사항, 한국에서 유튜브 대본 차단 시 사용)
+## OpenAI API 키 (OPEN_AI_API_KEY)
 
 ### 🔍 용도
 
-`youtube_transcript_api`가 유튜브 대본을 추출할 때 Webshare 프록시를 통해 우회 연결합니다.
+Gemini 대신 OpenAI의 GPT 모델을 사용할 때 필요합니다.
 
 ### 🛠 발급 방법
 
-1. https://www.webshare.io/ 접속 및 가입
-
-2. 로그인 후 대시보드 → Proxies → Proxy List 이동
-
-3. 아래 정보 확인:
-
-   - `Proxy Username`
-
-   - `Proxy Password`
-
-   - `Port`: 일반적으로 `80` 또는 `3128`
-
+1. https://platform.openai.com/signup 에서 회원가입 또는 로그인
+2. https://platform.openai.com/api-keys 접속
+3. "Create new secret key" 클릭 후 발급된 키 복사
 4. `.env`에 다음과 같이 작성:
 
 ```env
-WEBSHARE_PROXY_USERNAME=your_webshare_username
-WEBSHARE_PROXY_PASSWORD=your_webshare_password
-WEBSHARE_PROXY_PORT=80
+OPEN_AI_API_KEY=your_openai_api_key_here
 ```
 
-🔐 무료 계정도 사용 가능하지만, 속도 제한 및 지역 제한이 있으므로 필요 시 유료 업그레이드 권장
+---
+
+## Apify API 토큰 (APIFY_API_TOKEN)
+
+### 🔍 용도
+
+Apify 크롤러를 통해 유튜브 영상 정보 등 외부 데이터를 수집할 때 사용합니다.
+기존 유튜브 대본 크롤링 방식이 유튜브의 정책 변경으로 인해 높은 실패율을 보이므로, Apify를 통해 안정적으로 대본을 추출합니다.
+
+### 🛠 발급 방법
+
+1. https://apify.com 에서 회원가입 또는 로그인
+2. https://console.apify.com/settings/integrations 접속
+3. "API & Integration tokens" 섹션에서 기본 토큰 복사
+4. `.env`에 다음과 같이 작성:
+
+```env
+APIFY_API_TOKEN=your_apify_api_token_here
+```
 
 ---
 
@@ -95,9 +101,7 @@ Streamlit 앱에서 요약 결과를 사용자의 Notion 데이터베이스에 �
 ## 📌 참고: `.env` 예시
 
 ```env
-GOOGLE_API_KEY=AIzaSy...your_google_api_key...
-
-WEBSHARE_PROXY_USERNAME=proxy_user123
-WEBSHARE_PROXY_PASSWORD=proxy_pass456
-WEBSHARE_PROXY_PORT=80
+GOOGLE_API_KEY=your_google_api_key_here
+OPEN_AI_API_KEY=your_openai_api_key_here
+APIFY_API_TOKEN=your_apify_api_token_here
 ```

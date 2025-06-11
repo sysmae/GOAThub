@@ -40,14 +40,13 @@
 - 직관적 UI 제공 (Streamlit)
 - 유튜브 영상 링크 입력 후, 대본 추출 및 요약
 - 노션 저장 기능 연동
-- 사용자 맞춤형 옵션 제공
 
 ## 향후 확장 고려 기능
 
-- 옵시디언 저장 연동
-- 음성 인식 기반 대본 생성
-- 관련 자료 링크 추천
-- 블로그 포스팅, 퀴즈 생성, 챗봇 기능 등
+- 긴 영상 대본 섹션별 요약
+- 모델 등 사용자 맞춤형 옵션 제공
+- 다국어 지원 (한국어, 영어 등)
+- 챗봇 기능 등
 
 ---
 
@@ -82,11 +81,17 @@ git push origin feature/기능명
 ## 실행법
 
 1. **실행 명렁어**
-   streamlit run src/app.py
+
+```bash
+streamlit run src/app.py
+```
 
 2. **도커 활용**
-   docker build -t goathub-app .
-   docker run -p 8501:8501 --env-file .env goathub-app
+
+```bash
+docker build -t goathub-app .
+docker run -p 8501:8501 --env-file src/.env goathub-app
+```
 
 ---
 
