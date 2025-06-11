@@ -27,18 +27,26 @@ def load_dotenv_and_session(localS):
         st.session_state["openai_api_key"] = os.getenv("OPEN_AI_API_KEY", "")
     if "use_summary_length" not in st.session_state:
         val = localS.getItem("use_summary_length")
-        st.session_state["use_summary_length"] = (
-            val == "true" if isinstance(val, str) else bool(val)
-        )
+        # 문자열 "true"/"false" 또는 bool 처리
+        if isinstance(val, str):
+            st.session_state["use_summary_length"] = val.lower() == "true"
+        else:
+            st.session_state["use_summary_length"] = bool(val) if val is not None else False
     if "summary_length" not in st.session_state:
+        val = localS.getItem("summary_length")
         try:
-            val = int(localS.getItem("summary_length"))
-            if SUMMARY_LENGTH_MIN <= val <= SUMMARY_LENGTH_MAX:
-                st.session_state["summary_length"] = val
+            if val is not None:
+                # 문자열 또는 숫자 모두 int로 변환
+                val_int = int(val)
+                # 범위 체크
+                if SUMMARY_LENGTH_MIN <= val_int <= SUMMARY_LENGTH_MAX:
+                    st.session_state["summary_length"] = val_int
+                else:
+                    st.session_state["summary_length"] = SUMMARY_LENGTH_MIN
             else:
-                st.session_state["summary_length"] = 0
+                st.session_state["summary_length"] = SUMMARY_LENGTH_MIN
         except Exception:
-            st.session_state["summary_length"] = 0
+            st.session_state["summary_length"] = SUMMARY_LENGTH_MIN
 
 
 def init_session():

@@ -151,11 +151,11 @@ def load_video(url):
 # === 요약 실행 ===
 def run_summary():
     with st.spinner(LABELS["summarizing"]):
-        # use_summary_length가 False면 summary_length=None
+        # use_summary_length가 False면 summary_length=0, 아니면 0 사용
         summary_length = (
-            st.session_state.get("summary_length")
+            int(st.session_state.get("summary_length", 0))
             if st.session_state.get("use_summary_length")
-            else None
+            else 0
         )
         st.session_state.summary = summarize(
             st.session_state.get("transcript_text"),
@@ -168,11 +168,25 @@ def run_summary():
             summary_length=summary_length,
         )
         st.session_state.summarize_clicked = True
+        st.session_state["notion_saved"] = False
         # ✅ 자동 저장이 켜져 있으면 바로 Notion 저장
         if st.session_state.get("auto_save_to_notion") and not st.session_state.get(
             "notion_saved", False
         ):
-            save_to_notion_as_page(st.session_state.summary)
+            summary = st.session_state.summary
+            # dict 타입이면 텍스트 추출
+            if isinstance(summary, dict):
+                for key in ["output_text", "summary", "result"]:
+                    if key in summary and isinstance(summary[key], str):
+                        summary = summary[key]
+                        break
+                else:
+                    st.warning("Notion 저장 실패: 요약 결과에서 텍스트를 찾을 수 없습니다.")
+                    return
+            if not isinstance(summary, str):
+                st.warning("Notion 저장 실패: 요약 결과가 문자열이 아닙니다.")
+                return
+            save_to_notion_as_page(summary)
             st.session_state["notion_saved"] = True
 
 
@@ -188,11 +202,25 @@ def run_sectionwise_summary():
             ),
         )
         st.session_state.sectionwise_summarize_clicked = True
+        st.session_state["sectionwise_notion_saved"] = False
         # ✅ 자동 저장이 켜져 있으면 바로 Notion 저장
         if st.session_state.get("auto_save_to_notion") and not st.session_state.get(
             "sectionwise_notion_saved", False
         ):
-            save_to_notion_as_page(st.session_state.sectionwise_summary)
+            sectionwise = st.session_state.sectionwise_summary
+            # dict 타입이면 텍스트 추출
+            if isinstance(sectionwise, dict):
+                for key in ["output_text", "summary", "result"]:
+                    if key in sectionwise and isinstance(sectionwise[key], str):
+                        sectionwise = sectionwise[key]
+                        break
+                else:
+                    st.warning("Notion 저장 실패: 섹션별 요약 결과에서 텍스트를 찾을 수 없습니다.")
+                    return
+            if not isinstance(sectionwise, str):
+                st.warning("Notion 저장 실패: 섹션별 요약 결과가 문자열이 아닙니다.")
+                return
+            save_to_notion_as_page(sectionwise)
             st.session_state["sectionwise_notion_saved"] = True
 
 
@@ -201,6 +229,23 @@ def render_summary():
 
     if not summary:
         return
+
+    # summary가 dict 등 문자열이 아닐 경우 output_text 키 등에서 추출
+    if not isinstance(summary, str):
+        # output_text, summary, result 등에서 텍스트 추출 시도
+        if isinstance(summary, dict):
+            for key in ["output_text", "summary", "result"]:
+                if key in summary and isinstance(summary[key], str):
+                    summary = summary[key]
+                    break
+            else:
+                st.warning("요약 결과를 표시할 수 없습니다. (summary 타입 오류)")
+                st.json(summary)
+                return
+        else:
+            st.warning("요약 결과를 표시할 수 없습니다. (summary 타입 오류)")
+            st.json(summary)
+            return
 
     with st.expander(LABELS["summary_expander"], expanded=True):
         # 1. Mermaid 코드 블록 추출 및 렌더링 (시각화만)
@@ -223,7 +268,20 @@ def render_summary():
         )
         # 5. 단일 저장 버튼 (디자인 통일)
         if st.button(LABELS["notion_save_summary"], key="notion_save_summary"):
-            save_to_notion_as_page(summary)
+            # dict 타입이면 텍스트 추출
+            save_summary = summary
+            if isinstance(save_summary, dict):
+                for key in ["output_text", "summary", "result"]:
+                    if key in save_summary and isinstance(save_summary[key], str):
+                        save_summary = save_summary[key]
+                        break
+                else:
+                    st.warning("Notion 저장 실패: 요약 결과에서 텍스트를 찾을 수 없습니다.")
+                    return
+            if not isinstance(save_summary, str):
+                st.warning("Notion 저장 실패: 요약 결과가 문자열이 아닙니다.")
+                return
+            save_to_notion_as_page(save_summary)
             st.session_state["notion_saved"] = True
 
 
@@ -256,7 +314,19 @@ def render_sectionwise_summary():
         )
         # 단일 저장 버튼 (디자인 통일)
         if st.button(LABELS["notion_save_sectionwise"], key="notion_save_sectionwise"):
-            save_to_notion_as_page(download_content)
+            save_sectionwise = download_content
+            if isinstance(save_sectionwise, dict):
+                for key in ["output_text", "summary", "result"]:
+                    if key in save_sectionwise and isinstance(save_sectionwise[key], str):
+                        save_sectionwise = save_sectionwise[key]
+                        break
+                else:
+                    st.warning("Notion 저장 실패: 섹션별 요약 결과에서 텍스트를 찾을 수 없습니다.")
+                    return
+            if not isinstance(save_sectionwise, str):
+                st.warning("Notion 저장 실패: 섹션별 요약 결과가 문자열이 아닙니다.")
+                return
+            save_to_notion_as_page(save_sectionwise)
             st.session_state["sectionwise_notion_saved"] = True
 
 
@@ -334,23 +404,26 @@ with st.sidebar:
         key="use_summary_length_checkbox",
     )
     st.session_state["use_summary_length"] = use_summary_length
-    localS.setItem("use_summary_length", use_summary_length, key="set_use_summary_length")
+    localS.setItem(
+        "use_summary_length", str(use_summary_length).lower(), key="set_use_summary_length"
+    )
+
+    # summary_length는 항상 보존, 옵션이 켜졌을 때만 입력 UI 노출
+    raw_len = st.session_state.get("summary_length", SUMMARY_LENGTH_MIN)
+    try:
+        raw_len = int(raw_len)
+    except Exception:
+        raw_len = SUMMARY_LENGTH_MIN
+    # 범위 체크
+    if not (SUMMARY_LENGTH_MIN <= raw_len <= SUMMARY_LENGTH_MAX):
+        raw_len = SUMMARY_LENGTH_MIN
 
     if use_summary_length:
-        default_len = int(st.session_state.get("summary_length", SUMMARY_LENGTH_MAX))
-        # NoneType 방지: None이거나 int가 아니면 기본값으로
-        if default_len is None or not isinstance(default_len, int):
-            default_len = 2000
-        try:
-            if not (SUMMARY_LENGTH_MIN <= default_len <= SUMMARY_LENGTH_MAX):
-                default_len = SUMMARY_LENGTH_MIN
-        except TypeError:
-            default_len = SUMMARY_LENGTH_MIN
         summary_length = st.number_input(
             LABELS.get("summary_length_label", "요약 길이 (문자수)"),
             min_value=SUMMARY_LENGTH_MIN,
             max_value=SUMMARY_LENGTH_MAX,
-            value=default_len,
+            value=raw_len,
             step=50,
             help=LABELS.get(
                 "summary_length_help",
@@ -358,11 +431,12 @@ with st.sidebar:
             ),
             key="summary_length_input",
         )
-        st.session_state["summary_length"] = summary_length
-        localS.setItem("summary_length", summary_length, key="set_summary_length")
+        # 항상 int로 저장
+        st.session_state["summary_length"] = int(summary_length)
+        localS.setItem("summary_length", int(summary_length), key="set_summary_length")
     else:
-        st.session_state["summary_length"] = None
-        localS.setItem("summary_length", None, key="set_summary_length")
+        # 값을 0으로 바꾸지 않고 기존 summary_length를 그대로 둠
+        pass
 
 
 yt_url = st.text_input(LABELS["yt_input"], placeholder=LABELS["yt_input_placeholder"])
@@ -421,18 +495,14 @@ if st.session_state.get("transcript_text"):
             [LABELS["summary_tab"], LABELS["section_tab"], LABELS["chat_tab"]]
         )
         with tab1:
-            btn_placeholder = st.empty()
-            if not st.session_state.summarize_clicked:
-                if btn_placeholder.button(LABELS["summarize_btn"]):
-                    btn_placeholder.empty()
-                    run_summary()
+            # 항상 요약 버튼을 노출, 클릭 시 요약 재생성
+            if st.button(LABELS["summarize_btn"], key="summarize_btn_always"):
+                run_summary()
             render_summary()
         with tab2:
-            btn_placeholder2 = st.empty()
-            if not st.session_state.get("sectionwise_summarize_clicked", False):
-                if btn_placeholder2.button(LABELS["sectionwise_btn"]):
-                    btn_placeholder2.empty()
-                    run_sectionwise_summary()
+            # 항상 섹션별 요약 버튼을 노출, 클릭 시 재생성
+            if st.button(LABELS["sectionwise_btn"], key="sectionwise_btn_always"):
+                run_sectionwise_summary()
             render_sectionwise_summary()
         with tab3:
             render_chat_tab()
@@ -446,4 +516,4 @@ if st.session_state.get("transcript_text"):
                 start_time=0,
             )
         st.subheader(LABELS["original_transcript"])
-        st.text_area("", st.session_state.transcript_text, height=300)
+        st.text_area(" ", st.session_state.transcript_text, height=300)  # label을 공백으로

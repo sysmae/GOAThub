@@ -10,16 +10,23 @@ from langchain.prompts.chat import (
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
-from constant import LANG_OPTIONS, SUMMARY_LENGTH_MAX, SUMMARY_LENGTH_MIN, UI_LABELS
-
+from constant import (
+    LANG_OPTIONS,
+    SUMMARY_LENGTH_MAX,
+    SUMMARY_LENGTH_MIN,
+    SUMMARY_LENGTH_RANGE1,
+    SUMMARY_LENGTH_RANGE2,
+    UI_LABELS,
+)
 
 # 다국어 프롬프트 템플릿
-# 만약 summary_length가 None이면 원래 프롬프트 사용
+
+
+# 길이를 요구하지 않았을때 기본으로 사용하는 핵심 요약 프롬프트
 def get_prompt(lang_code):
-    lang_map = {v: k for k, v in LANG_OPTIONS.items()}  # 코드:이름 형태로 변환
+    lang_map = {v: k for k, v in LANG_OPTIONS.items()}
     if lang_code not in lang_map:
         raise ValueError(f"지원하지 않는 언어 코드: {lang_code}")
-
     if lang_code == "ko":
         return """
 # 📑 유튜브 대본을 계층적·시각적 Markdown 요약으로 변환하는 프롬프트
@@ -42,7 +49,7 @@ def get_prompt(lang_code):
 
 ### 2. 시각적 요소
 - 각 섹션/항목에 어울리는 이모지 활용
-- 복잡한 관계나 흐름은 mermaid, ASCII 등으로 시각화(필요시) 단, 노션에서 쓸 수 있는 단순한 형식의 mermaid 문법 만 사용
+- 복잡한 관계나 흐름은 mermaid, ASCII, 등으로 시각화(필요시) 단, 노션에서 쓸 수 있는 단순한 형식의 mermaid 문법 만 사용
 - 표, 순서도, 타임라인 등 Markdown 지원 요소 적극 사용
 
 ### 3. 서술 스타일
@@ -281,7 +288,7 @@ Résumez le texte suivant en utilisant la structure Markdown ci-dessous.
 - Principales sections** : `##` + emoji + mots clés.
 - Sous-titres** : `####` + no. Mots-clés.
 - Détails : organisés avec des puces (-), ajouter des sous-thèmes si nécessaire.
-- Hiérarchiser au moins trois niveaux
+- Hiérarchiser au moins à trois niveaux
 - Gras pour les termes importants, _italique_ pour les chiffres/années/conclusions clés**.
 
 ### 2. Visuels
@@ -448,30 +455,273 @@ Un resumen en formato markdown:
         """
 
 
-# 만약 summary_length가 None이 아니면, 요약 길이 설정 프롬프트 추가
-def get_prompt_with_length(lang_code, summary_length):
-    base_prompt = get_prompt(lang_code)
-    if summary_length and SUMMARY_LENGTH_MIN <= summary_length <= SUMMARY_LENGTH_MAX:
-        if lang_code == "ko":
-            length_msg = f"# 요약 길이 제한\n- 전체 요약은 반드시 {summary_length}자 이내로 작성하세요.\n(마크다운 태그 포함)\n짧은 요약이 필요하다면 구조화된 요약 대신 간단한 요약을 고려하세요."
-        elif lang_code == "en":
-            length_msg = f"# Summary Length Limit\n- The entire summary must be within {summary_length} characters.\n(including markdown tags)\nIf a shorter summary is needed, consider a simple summary instead of a structured one."
-        elif lang_code == "ja":
-            length_msg = f"# 要約の長さ制限\n- 全体の要約は必ず{summary_length}文字以内で作成してください。\n（Markdownタグを含む）\n短い要約が必要な場合は、構造化された要約の代わりに簡単な要約を検討してください。"
-        elif lang_code == "zh":
-            length_msg = f"# 摘要长度限制\n- 整个摘要必须控制在{summary_length}个字符以内。\n（包括Markdown标签）\n如果需要更短的摘要，请考虑使用简单摘要而不是结构化摘要。"
-        elif lang_code == "fr":
-            length_msg = f"# Limite de longueur du résumé\n- Le résumé complet doit comporter au maximum {summary_length} caractères.\n(incluant les balises Markdown)\nSi un résumé plus court est nécessaire, envisagez un résumé simple plutôt qu'un résumé structuré."
-        elif lang_code == "de":
-            length_msg = f"# Zusammenfassungslängenbegrenzung\n- Die gesamte Zusammenfassung darf maximal {summary_length} Zeichen umfassen.\n(einschließlich Markdown-Tags)\nWenn eine kürzere Zusammenfassung erforderlich ist, ziehen Sie eine einfache Zusammenfassung anstelle einer strukturierten in Betracht."
-        elif lang_code == "es":
-            length_msg = f"# Límite de longitud del resumen\n- El resumen completo debe tener un máximo de {summary_length} caracteres.\n(incluyendo etiquetas Markdown)\nSi se necesita un resumen más corto, considere un resumen simple en lugar de uno estructurado."
-        else:
-            length_msg = f"# Summary Length Limit\n- The entire summary must be within {summary_length} characters.\n(including markdown tags)\nIf a shorter summary is needed, consider a simple summary instead of a structured one."
-        # 길이 제한 프롬프트를 base_prompt의 가장 앞에 배치
-        return length_msg + base_prompt
+# 만약 summary_length에 따라 상단에 요약 길이 제한 메시지를 추가하기 위한 함수
+def get_length_limit_message(lang_code, summary_length):
+    if lang_code == "ko":
+        return f"아래 텍스트를 {summary_length}자 이내의 간결한 한글 요약문으로 작성하세요.\n- 핵심 내용만 포함하고, 불필요한 설명이나 감상은 제외하세요.\n"
+    elif lang_code == "en":
+        return f"Summarize the following text in concise English within {summary_length} characters.\n- Include only the key points, exclude unnecessary details or opinions.\n"
+    elif lang_code == "ja":
+        return f"以下のテキストを{summary_length}文字以内の簡潔な日本語要約文にしてください。\n- 重要な内容のみを含め、不要な説明や感想は除いてください。\n"
+    elif lang_code == "zh":
+        return f"请将以下文本简明扼要地总结为{summary_length}字以内的中文摘要。\n- 只包含核心内容，去除多余说明和感想。\n"
+    elif lang_code == "fr":
+        return f"Résumez le texte ci-dessous en français en {summary_length} caractères.\n- Incluez uniquement les points clés, sans détails ou opinions inutiles.\n"
+    elif lang_code == "de":
+        return f"Fassen Sie den folgenden Text in {summary_length} Zeichen auf Deutsch zusammen.\n- Nur die wichtigsten Punkte, keine unnötigen Details oder Meinungen.\n"
+    elif lang_code == "es":
+        return f"Resume el siguiente texto en español en {summary_length} caracteres.\n- Incluye solo los puntos clave, sin detalles ni opiniones innecesarias.\n"
     else:
-        return base_prompt
+        return f"Summarize the following text in concise English within {summary_length} characters.\n- Include only the key points, exclude unnecessary details or opinions.\n"
+
+
+# 만약 summary_length의 길이에 따라 다르게 사용
+def get_prompt_with_length(lang_code, summary_length):
+    lang_map = {v: k for k, v in LANG_OPTIONS.items()}  # 코드:이름 형태로 변환
+    if lang_code not in lang_map:
+        raise ValueError(f"지원하지 않는 언어 코드: {lang_code}")
+
+    length_msg = ""
+    if summary_length is not None:
+        length_msg = get_length_limit_message(lang_code, summary_length) + "\n"
+
+    # 단문(200~500자): 1단계 구조 분석
+    if summary_length is not None and SUMMARY_LENGTH_MIN <= summary_length <= SUMMARY_LENGTH_RANGE1:
+        if lang_code == "ko":
+            prompt = (
+                f"{length_msg}"
+                "- 불필요한 설명, 감상, 광고성 문구는 제외하세요.\n"
+                "- 마크다운 태그 없이 평문으로 작성하세요.\n\n"
+                "{text}\n"
+            )
+        elif lang_code == "en":
+            prompt = (
+                f"{length_msg}"
+                "- Include only the key points, exclude unnecessary details or opinions.\n"
+                "- Write as plain text, no markdown tags.\n\n"
+                "{text}\n"
+            )
+        elif lang_code == "ja":
+            prompt = (
+                f"{length_msg}"
+                "- 重要な内容のみを含め、不要な説明や感想は除いてください。\n"
+                "- 마크다운 태그なしの平文で書いてください。\n\n"
+                "{text}\n"
+            )
+        elif lang_code == "zh":
+            prompt = (
+                f"{length_msg}"
+                "- 只包含核心内容，去除多余说明和感想。\n"
+                "- 仅用普通文本，不要使用Markdown标签。\n\n"
+                "{text}\n"
+            )
+        elif lang_code == "fr":
+            prompt = (
+                f"{length_msg}"
+                "- Incluez uniquement les points clés, sans détails ou opinions inutiles.\n"
+                "- Rédigez en texte brut, sans balises markdown.\n\n"
+                "{text}\n"
+            )
+        elif lang_code == "de":
+            prompt = (
+                f"{length_msg}"
+                "- Nur die wichtigsten Punkte, keine unnötigen Details oder Meinungen.\n"
+                "- Schreiben Sie als Klartext, ohne Markdown-Tags.\n\n"
+                "{text}\n"
+            )
+        elif lang_code == "es":
+            prompt = (
+                f"{length_msg}"
+                "- Incluye solo los puntos clave, sin detalles ni opiniones innecesarias.\n"
+                "- Escribe en texto plano, sin etiquetas markdown.\n\n"
+                "{text}\n"
+            )
+        else:
+            prompt = (
+                f"{length_msg}"
+                "- Include only the key points, exclude unnecessary details or opinions.\n"
+                "- Write as plain text, no markdown tags.\n\n"
+                "{text}\n"
+            )
+        return prompt
+
+    # 중문(501~1500자): 3단계 구조 분석
+
+    elif (
+        summary_length is not None
+        and SUMMARY_LENGTH_RANGE1 < summary_length <= SUMMARY_LENGTH_RANGE2
+    ):
+        if lang_code == "ko":
+            return (
+                f"{length_msg}"
+                + """
+아래 텍스트를 3단계 구조(제목, 주요 항목, 세부 내용)로 한글 마크다운 요약하세요.
+- 반드시 3단계(제목-항목-세부)로 계층화
+- 각 항목은 불릿포인트로 정리
+- 불필요한 감상/광고/사족은 배제
+
+예시:
+# 💡 주요 주제
+## 1. 핵심 항목1
+- 세부 내용1
+- 세부 내용2
+## 2. 핵심 항목2
+- 세부 내용1
+- 세부 내용2
+
+{text}
+"""
+            )
+        elif lang_code == "en":
+            return (
+                f"{length_msg}"
+                + """
+Summarize the following text in English using a 3-level markdown structure (title, main items, details).
+- Must use 3 levels: title-main item-detail (with bullet points)
+- Exclude unnecessary opinions/ads
+
+Example:
+# 💡 Main Topic
+## 1. Key Item 1
+- Detail 1
+- Detail 2
+## 2. Key Item 2
+- Detail 1
+- Detail 2
+
+{text}
+"""
+            )
+        elif lang_code == "ja":
+            return (
+                f"{length_msg}"
+                + """
+以下のテキストを3階層構造（タイトル、主要項目、詳細）で日本語マークダウン要約してください。
+- 必ず3階層（タイトル-項目-詳細）でまとめる
+- 各項目は箇条書きで整理
+- 不要な感想や広告は除く
+
+例:
+# 💡 主題
+## 1. 主要項目1
+- 詳細1
+- 詳細2
+## 2. 主要項目2
+- 詳細1
+- 詳細2
+
+{text}
+"""
+            )
+        elif lang_code == "zh":
+            return (
+                f"{length_msg}"
+                + """
+请将以下文本用中文以3级结构（标题、主要条目、细节）进行Markdown摘要。
+- 必须分3级：标题-条目-细节（用列表符号）
+- 排除不必要的感想/广告
+
+示例:
+# 💡 主题
+## 1. 主要条目1
+- 细节1
+- 细节2
+## 2. 主要条目2
+- 细节1
+- 细节2
+
+{text}
+"""
+            )
+        elif lang_code == "fr":
+            return (
+                f"{length_msg}"
+                + """
+Résumez le texte ci-dessous en français avec une structure markdown à 3 niveaux (titre, éléments principaux, détails).
+- Utilisez 3 niveaux : titre-élément-détail (avec puces)
+- Exclure les opinions/publicités inutiles
+
+Exemple :
+# 💡 Sujet principal
+## 1. Élément clé 1
+- Détail 1
+- Détail 2
+## 2. Élément clé 2
+- Détail 1
+- Détail 2
+
+{text}
+"""
+            )
+        elif lang_code == "de":
+            return (
+                f"{length_msg}"
+                + """
+Fassen Sie den folgenden Text auf Deutsch in einer 3-stufigen Markdown-Struktur (Titel, Hauptpunkte, Details) zusammen.
+- Verwenden Sie 3 Ebenen: Titel-Hauptpunkt-Detail (mit Aufzählung)
+- Keine unnötigen Meinungen/Werbung
+
+Beispiel:
+# 💡 Hauptthema
+## 1. Hauptpunkt 1
+- Detail 1
+- Detail 2
+## 2. Hauptpunkt 2
+- Detail 1
+- Detail 2
+
+{text}
+"""
+            )
+        elif lang_code == "es":
+            return (
+                f"{length_msg}"
+                + """
+Resume el siguiente texto en español usando una estructura markdown de 3 niveles (título, elementos principales, detalles).
+- Usa 3 niveles: título-elemento-detalle (con viñetas)
+- Excluye opiniones/publicidad innecesarias
+
+Ejemplo:
+# 💡 Tema principal
+## 1. Elemento clave 1
+- Detalle 1
+- Detalle 2
+## 2. Elemento clave 2
+- Detalle 1
+- Detalle 2
+
+{text}
+"""
+            )
+        else:
+            return (
+                f"{length_msg}"
+                + """
+Summarize the following text in English using a 3-level markdown structure (title, main items, details).
+- Must use 3 levels: title-main item-detail (with bullet points)
+- Exclude unnecessary opinions/ads
+
+Example:
+# 💡 Main Topic
+## 1. Key Item 1
+- Detail 1
+- Detail 2
+## 2. Key Item 2
+- Detail 1
+- Detail 2
+
+{text}
+"""
+            )
+    # 장문(1501자 이상): 기존 계층적·시각적 프롬프트
+    elif (
+        summary_length is not None and SUMMARY_LENGTH_RANGE2 < summary_length <= SUMMARY_LENGTH_MAX
+    ):
+        # length_msg만 상단에 추가하고 get_prompt(lang_code) 프롬프트를 그대로 사용
+        return f"{length_msg}{get_prompt(lang_code)}"
+
+    # 기본값: 200자 이내
+    return f"{length_msg}{get_prompt(lang_code)}"
 
 
 # 언어별 섹션 요약 프롬프트 반환 함수 추가
@@ -578,7 +828,7 @@ def get_final_summary_prompt(lang_code, combined_summary):
 아래 내용을 계층적이고 시각적으로 구조화된 Markdown 요약으로 변환하세요.
 
 - 반드시 한국어로 출력하세요.
-- 아래의 구조와 스타일 가이드를 반드시 따르세요.
+- 아래의 구조와 스타일 가이드에 반드시 따르세요.
 
 ## 구조 및 포맷
 - 최상위 제목: # + 영상 핵심 주제 (이모지 포함)
@@ -619,7 +869,7 @@ Follow these instructions and formatting rules:
   - Use bold for important terms, and italics for numbers/years/key findings.
 
 - Visuals:
-  - Use emojis in every section and subsection title.
+  - Use emojis in every section and subsection.
   - Visualize complex relationships or flows using mermaid, tables, timelines, etc.
 
 - Writing style:
@@ -648,7 +898,7 @@ Make sure the summary is comprehensive and visually organized, so that someone w
 - 小見出し: ### + 番号. キーワード
 - 詳細: 箇条書き（-）、必要に応じてサブトピック追加
 - 最低3階層以上
-- 重要語は太字、数字/年/重要結果は_斜体_
+- 重要語は太字、数字/年/重要な結果は_斜体_
 
 ## ビジュアル
 - 各セクション/項目に絵文字活用
@@ -656,13 +906,13 @@ Make sure the summary is comprehensive and visually organized, so that someone w
 
 ## 文体
 - 客観的・説明的・学術的トーン
-- 不要な感想/広告/蛇足は排除
+- 不要な感情/意見/広告は排除
 - 重要情報を簡潔にまとめる
 
 要約対象:
 {combined_summary}
 
-誰でも元の内容을 보지 않아도 이해できるように視覚的に整理してください。
+誰でも元の内容을 보지 않아도 이해できるよう에 시각적으로 잘 정리하세요.
 
 ---
 """
@@ -706,8 +956,8 @@ Veuillez convertir le contenu suivant en un résumé Markdown hiérarchisé et v
 
 ## Structure et formatage
 - Titre principal: # + sujet clé (avec emoji)
-- Sections principales: ## + emoji + mots-clés
-- Sous-titres: ### + numéro. mots-clés
+- Sections principales: ## + emoji + ключевые слова
+- Sous-titres: ### + номер. mots-clés
 - Détails: puces (-), sous-thèmes si nécessaire
 - Hiérarchisez sur au moins trois niveaux
 - Termes importants en gras, chiffres/années/résultats en _italique_
@@ -739,13 +989,13 @@ Bitte wandeln Sie den folgenden Inhalt in eine hierarchisch und visuell struktur
 - Haupttitel: # + Kernthema (mit Emoji)
 - Hauptabschnitte: ## + Emoji + Schlüsselwörter
 - Zwischenüberschriften: ### + Nummer. Schlüsselwörter
-- Details: Aufzählungspunkte (-), ggf. Unterthemen hinzufügen
+- Details: Aufzählungspunkte (-), Unterthemen nach Bedarf hinzufügen
 - Mindestens drei Ebenen Hierarchie
 - Wichtige Begriffe fett, Zahlen/Jahre/Ergebnisse _kursiv_
 
 ## Visuelle Elemente
 - Emojis in jedem Abschnitt und Unterabschnitt
-- Komplexe Beziehungen/Flüsse mit mermaid, Tabellen, Zeitachsen etc. visualisieren
+- Komplexe Beziehungen/Flüsse mit mermaid, Tabellen, Zeitleisten etc. visualisieren
 
 ## Stil
 - Objektiv, beschreibend, akademisch
@@ -771,8 +1021,8 @@ Por favor, convierta el siguiente contenido en un resumen Markdown jerárquico y
 - Secciones principales: ## + emoji + palabras clave
 - Subtítulos: ### + número. palabras clave
 - Detalles: viñetas (-), subtemas si es necesario
-- Jerarquice al menos en tres niveles
-- Términos importantes en negrita, números/años/resultados en _cursiva_
+- Jerarquizar al menos en tres niveles
+- Términos importantes en negrita, números/años/descubrimientos clave en _cursiva_
 
 ## Visuales
 - Use emojis en cada sección y subsección
@@ -924,6 +1174,7 @@ def summarize(
     lang_code = st.session_state.get("selected_lang", "ko")
     LABELS = UI_LABELS.get(lang_code, UI_LABELS["ko"])
 
+    # 단문/중문/장문 프롬프트 분기
     if "gemini" in model:
         if not api_key:
             return LABELS["missing_api_key"].format("Google Gemini")
@@ -935,7 +1186,7 @@ def summarize(
         if not summary_length:
             original_template = get_prompt(lang_code)
         else:
-            original_template = get_prompt_with_length(lang_code, summary_length)
+            original_template = get_prompt(lang_code, summary_length)
         system_msg = """
         You are a helpful assistant.
         Always respond in valid Markdown format.
@@ -961,10 +1212,11 @@ def summarize(
             return LABELS["gemini_quota_exceeded"]
         except Exception as e:
             return f"{LABELS['summary_error']}: {e}"
+
     elif "gpt" in model:
         if not api_key:
             return LABELS["missing_api_key"].format("OpenAI")
-        if summary_length:
+        if summary_length > 0:
             prompt_template = get_prompt_with_length(lang_code, summary_length)
         else:
             prompt_template = get_prompt(lang_code)
@@ -981,9 +1233,7 @@ def summarize(
             verbose=False,
         )
         docs = [Document(page_content=text)]
-        try:
-            return chain.run(docs)
-        except Exception as e:
-            return f"{LABELS['openai_summary_error']}: {e}"
+        return chain.run(docs)
+
     else:
         return LABELS["unsupported_model"]
