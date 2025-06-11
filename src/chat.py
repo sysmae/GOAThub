@@ -10,11 +10,7 @@ from langchain.schema import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
-from constant import LANG_OPTIONS, UI_LABELS
-
-# 언어코드-이름 매핑 상수
-LANG_CODE_TO_NAME = {v: k.split(" ", 1)[-1] for k, v in LANG_OPTIONS.items()}
-# 예: {'ko': '한국어', 'en': 'English', ...}
+from constant import UI_LABELS
 
 # 언어별 추천 질문
 suggested_questions_map = {
@@ -128,22 +124,110 @@ class LangChainChatManager:
         self.memory = ConversationBufferMemory(return_messages=True, memory_key="chat_history")
         self.chat_template = self._create_chat_template()
 
-    def _create_chat_template(self) -> ChatPromptTemplate:
-        """채팅을 위한 프롬프트 템플릿 생성"""
-        # 언어 선택에 따라 답변 언어를 동적으로 지정
-        selected_lang = st.session_state.get("selected_lang", "ko")
-        lang_name = LANG_CODE_TO_NAME.get(selected_lang, "한국어")
-        system_prompt = f"""You are an AI assistant that answers questions based on a YouTube video summary and transcript.
+    # 언어별 system 프롬프트 반환 함수
+    def get_chat_system_prompt(self, lang_code):
+        if lang_code == "ko":
+            return """당신은 유튜브 영상 요약과 대본을 바탕으로 질문에 답하는 AI 어시스턴트입니다.
+
+영상 요약:
+{summary}
+
+원본 대본 일부:
+{transcript}
+
+위 영상 내용을 참고하여 사용자의 질문에 친절하고 구체적으로 답변하세요.
+반드시 한국어로 답변하고, 영상 내용과 관련된 정확한 정보를 제공하세요.
+질문이 영상에 없는 정보라면 그 사실을 명확히 밝히고, 영상 범위 내에서 도움이 될 만한 정보를 안내하세요."""
+        elif lang_code == "en":
+            return """You are an AI assistant that answers questions based on a YouTube video summary and transcript.
 
 Video summary:
-{{summary}}
+{summary}
 
 Part of the original transcript:
-{{transcript}}
+{transcript}
 
 Refer to the above video content and answer the user's questions kindly and specifically.
-Your answer must be written in {lang_name}, and provide accurate information related to the video content.
+Your answer must be written in English, and provide accurate information related to the video content.
 If the question is about information not present in the video, clearly state that fact and provide any helpful information within the scope of the video content."""
+        elif lang_code == "ja":
+            return """あなたはYouTube動画の要約と字幕に基づいて質問に答えるAIアシスタントです。
+
+動画の要約:
+{summary}
+
+元の字幕の一部:
+{transcript}
+
+上記の動画内容を参考に、ユーザーの質問に親切かつ具体的に答えてください。
+必ず日本語で回答し、動画内容に関連する正確な情報を提供してください。
+質問が動画にない情報の場合は、その事実を明確に伝え、動画の範囲内で役立つ情報を案内してください。"""
+        elif lang_code == "zh":
+            return """你是一个基于YouTube视频摘要和字幕回答问题的AI助手。
+
+视频摘要:
+{summary}
+
+原始字幕片段:
+{transcript}
+
+请参考上述视频内容，友好且具体地回答用户的问题。
+必须用中文作答，并提供与视频内容相关的准确信息。
+如果问题涉及视频中没有的信息，请明确说明，并在视频内容范围内提供有用的信息。"""
+        elif lang_code == "fr":
+            return """Vous êtes un assistant IA qui répond aux questions à partir du résumé et de la transcription d'une vidéo YouTube.
+
+Résumé de la vidéo :
+{summary}
+
+Extrait de la transcription originale :
+{transcript}
+
+Référez-vous au contenu ci-dessus et répondez de manière précise et bienveillante.
+Votre réponse doit être rédigée en Français et fournir des informations exactes liées à la vidéo.
+Si la question concerne une information absente de la vidéo, indiquez-le clairement et fournissez toute information utile dans le cadre du contenu vidéo."""
+        elif lang_code == "de":
+            return """Du bist ein KI-Assistent, der Fragen auf Basis einer YouTube-Videozusammenfassung und eines Transkripts beantwortet.
+
+Videozusammenfassung:
+{summary}
+
+Teil des Originaltranskripts:
+{transcript}
+
+Beziehe dich auf den obigen Videoinhalt und beantworte die Fragen freundlich und konkret.
+Deine Antwort muss auf Deutsch verfasst sein und genaue, zum Video passende Informationen liefern.
+Falls die Frage Informationen betrifft, die nicht im Video enthalten sind, weise klar darauf hin und gib hilfreiche Hinweise im Rahmen des Videoinhalts."""
+        elif lang_code == "es":
+            return """Eres un asistente de IA que responde preguntas basadas en el resumen y la transcripción de un video de YouTube.
+
+Resumen del video:
+{summary}
+
+Parte de la transcripción original:
+{transcript}
+
+Consulta el contenido anterior y responde amablemente y de manera específica.
+Tu respuesta debe estar escrita en Español y proporcionar información precisa relacionada con el video.
+Si la pregunta trata sobre información no presente en el video, indícalo claramente y proporciona cualquier información útil dentro del alcance del contenido del video."""
+        else:
+            # 기본값: 영어
+            return """You are an AI assistant that answers questions based on a YouTube video summary and transcript.
+
+Video summary:
+{summary}
+
+Part of the original transcript:
+{transcript}
+
+Refer to the above video content and answer the user's questions kindly and specifically.
+Your answer must be written in English, and provide accurate information related to the video content.
+If the question is about information not present in the video, clearly state that fact and provide any helpful information within the scope of the video content."""
+
+    def _create_chat_template(self) -> ChatPromptTemplate:
+        """채팅을 위한 프롬프트 템플릿 생성"""
+        selected_lang = st.session_state.get("selected_lang", "ko")
+        system_prompt = self.get_chat_system_prompt(selected_lang)
         template = ChatPromptTemplate.from_messages(
             [
                 ("system", system_prompt),

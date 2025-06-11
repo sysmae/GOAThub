@@ -1,4 +1,7 @@
-# 언어 옵션을 한 곳에서만 정의하고, 사이드바와 get_prompt 모두에서 사용
+SUMMARY_LENGTH_MIN = 200
+SUMMARY_LENGTH_MAX = 3000
+
+
 LANG_OPTIONS = {
     "🇰🇷 한국어": "ko",
     "🇺🇸 English": "en",
@@ -9,15 +12,6 @@ LANG_OPTIONS = {
     "🇪🇸 Español": "es",
 }
 
-LANG_CODE_TO_LANGNAME = {
-    "ko": "Korean",
-    "en": "English",
-    "ja": "Japanese",
-    "zh": "Chinese",
-    "fr": "French",
-    "de": "German",
-    "es": "Spanish",
-}
 
 UI_LABELS = {
     "ko": {
@@ -81,6 +75,17 @@ UI_LABELS = {
         "overall_summary_done": "✅ 전체 요약 생성 완료!",
         "gemini_quota_exceeded": "⚠️ Google Generative AI API 사용량이 초과되었습니다. 잠시 후 다시 시도하거나, API 할당량을 확인하세요.",
         "openai_summary_error": "⚠️ OpenAI 요약 생성 중 오류가 발생했습니다",
+        # === 대본 처리 과정 메시지 ===
+        "transcript_apify_try": "⚡ [1단계] Apify 자막 시도",
+        "transcript_apify_success": "🟢 [1단계] Apify 자막 성공",
+        "transcript_apify_fail": "⚠️ [1단계] Apify 자막 실패, Whisper 전사 시도",
+        "transcript_audio_download_try": "⏬ [2단계] 오디오 다운로드 시도",
+        "transcript_audio_download_fail": "⚠️ [2단계] 오디오 다운로드 실패",
+        "transcript_audio_too_large": "⚠️ [2단계] 파일 크기가 25MB를 초과합니다",
+        "transcript_whisper_try": "🔊⏳ [3단계] Whisper 전사(음성 인식) 시작 - 최대 수 분 소요될 수 있습니다.",
+        "transcript_whisper_fail": "⚠️ [3단계] Whisper 전사 실패",
+        "transcript_whisper_no_result": "⚠️ [3단계] Whisper 전사 결과 없음",
+        "transcript_whisper_success": "✅ [3단계] Whisper 전사 성공",
     },
     "en": {
         "app_title": "YouTube Transcript Summarizer",
@@ -143,6 +148,17 @@ UI_LABELS = {
         "overall_summary_done": "✅ Overall summary generation complete!",
         "gemini_quota_exceeded": "⚠️ Google Generative AI API quota exceeded. Please try again later or check your API quota.",
         "openai_summary_error": "⚠️ Error occurred during OpenAI summary generation",
+        # === Transcript process messages ===
+        "transcript_apify_try": "⚡ [Step 1] Trying Apify transcript",
+        "transcript_apify_success": "🟢 [Step 1] Apify transcript success",
+        "transcript_apify_fail": "⚠️ [Step 1] Apify transcript failed, trying Whisper",
+        "transcript_audio_download_try": "⏬ [Step 2] Downloading audio",
+        "transcript_audio_download_fail": "⚠️ [Step 2] Audio download failed",
+        "transcript_audio_too_large": "⚠️ [Step 2] Audio file exceeds 25MB",
+        "transcript_whisper_try": "🔊⏳ [Step 3] Whisper transcription (speech-to-text) started - may take several minutes.",
+        "transcript_whisper_fail": "⚠️ [Step 3] Whisper transcription failed",
+        "transcript_whisper_no_result": "⚠️ [Step 3] No result from Whisper",
+        "transcript_whisper_success": "✅ [Step 3] Whisper transcription success",
     },
     "ja": {
         "app_title": "YouTube 字幕要約サービス",
@@ -205,6 +221,17 @@ UI_LABELS = {
         "overall_summary_done": "✅ 全体要約の生成が完了しました！",
         "gemini_quota_exceeded": "⚠️ Google Generative AI APIの利用上限を超えました。しばらくしてから再試行するか、APIの割り当てを確認してください。",
         "openai_summary_error": "⚠️ OpenAI要約生成中にエラーが発生しました",
+        # === 字幕処理プロセスメッセージ ===
+        "transcript_apify_try": "⚡ [ステップ1] Apify字幕取得を試行中",
+        "transcript_apify_success": "🟢 [ステップ1] Apify字幕取得成功",
+        "transcript_apify_fail": "⚠️ [ステップ1] Apify字幕失敗、Whisperを試行",
+        "transcript_audio_download_try": "⏬ [ステップ2] 音声ダウンロード中",
+        "transcript_audio_download_fail": "⚠️ [ステップ2] 音声ダウンロード失敗",
+        "transcript_audio_too_large": "⚠️ [ステップ2] 音声ファイルが25MBを超えています",
+        "transcript_whisper_try": "🔊⏳ [ステップ3] Whisper書き起こし開始 - 数分かかる場合があります。",
+        "transcript_whisper_fail": "⚠️ [ステップ3] Whisper書き起こし失敗",
+        "transcript_whisper_no_result": "⚠️ [ステップ3] Whisperから結果なし",
+        "transcript_whisper_success": "✅ [ステップ3] Whisper書き起こし成功",
     },
     "zh": {
         "app_title": "YouTube 字幕摘要服务",
@@ -267,6 +294,17 @@ UI_LABELS = {
         "overall_summary_done": "✅ 整体摘要生成完成！",
         "gemini_quota_exceeded": "⚠️ Google Generative AI API配额已超出。请稍后再试或检查API配额。",
         "openai_summary_error": "⚠️ OpenAI摘要生成时发生错误",
+        # === 字幕处理流程消息 ===
+        "transcript_apify_try": "⚡ [步骤1] 正在尝试Apify字幕",
+        "transcript_apify_success": "🟢 [步骤1] Apify字幕成功",
+        "transcript_apify_fail": "⚠️ [步骤1] Apify字幕失败，尝试Whisper",
+        "transcript_audio_download_try": "⏬ [步骤2] 正在下载音频",
+        "transcript_audio_download_fail": "⚠️ [步骤2] 音频下载失败",
+        "transcript_audio_too_large": "⚠️ [步骤2] 音频文件超过25MB",
+        "transcript_whisper_try": "🔊⏳ [步骤3] 开始Whisper转录（语音识别），可能需要几分钟。",
+        "transcript_whisper_fail": "⚠️ [步骤3] Whisper转录失败",
+        "transcript_whisper_no_result": "⚠️ [步骤3] Whisper无结果",
+        "transcript_whisper_success": "✅ [步骤3] Whisper转录成功",
     },
     "fr": {
         "app_title": "Service de résumé de transcription YouTube",
@@ -329,6 +367,17 @@ UI_LABELS = {
         "overall_summary_done": "✅ Résumé global généré !",
         "gemini_quota_exceeded": "⚠️ Quota Google Generative AI API dépassé. Veuillez réessayer plus tard ou vérifier votre quota.",
         "openai_summary_error": "⚠️ Erreur lors de la génération du résumé OpenAI",
+        # === Messages de processus de transcription ===
+        "transcript_apify_try": "⚡ [Étape 1] Tentative de transcription Apify",
+        "transcript_apify_success": "🟢 [Étape 1] Transcription Apify réussie",
+        "transcript_apify_fail": "⚠️ [Étape 1] Échec Apify, tentative Whisper",
+        "transcript_audio_download_try": "⏬ [Étape 2] Téléchargement audio",
+        "transcript_audio_download_fail": "⚠️ [Étape 2] Échec du téléchargement audio",
+        "transcript_audio_too_large": "⚠️ [Étape 2] Fichier audio > 25 Mo",
+        "transcript_whisper_try": "🔊⏳ [Étape 3] Transcription Whisper (reconnaissance vocale) en cours - cela peut prendre plusieurs minutes.",
+        "transcript_whisper_fail": "⚠️ [Étape 3] Échec de la transcription Whisper",
+        "transcript_whisper_no_result": "⚠️ [Étape 3] Aucun résultat de Whisper",
+        "transcript_whisper_success": "✅ [Étape 3] Transcription Whisper réussie",
     },
     "de": {
         "app_title": "YouTube Transkript-Zusammenfassung",
@@ -391,6 +440,17 @@ UI_LABELS = {
         "overall_summary_done": "✅ Gesamte Zusammenfassung abgeschlossen!",
         "gemini_quota_exceeded": "⚠️ Google Generative AI API-Kontingent überschritten. Bitte versuchen Sie es später erneut oder überprüfen Sie Ihr API-Kontingent.",
         "openai_summary_error": "⚠️ Fehler bei der OpenAI-Zusammenfassungserstellung",
+        # === Transkriptprozess-Meldungen ===
+        "transcript_apify_try": "⚡ [Schritt 1] Apify-Transkript wird versucht",
+        "transcript_apify_success": "🟢 [Schritt 1] Apify-Transkript erfolgreich",
+        "transcript_apify_fail": "⚠️ [Schritt 1] Apify-Transkript fehlgeschlagen, Whisper wird versucht",
+        "transcript_audio_download_try": "⏬ [Schritt 2] Audio wird heruntergeladen",
+        "transcript_audio_download_fail": "⚠️ [Schritt 2] Audio-Download fehlgeschlagen",
+        "transcript_audio_too_large": "⚠️ [Schritt 2] Audiodatei > 25MB",
+        "transcript_whisper_try": "🔊⏳ [Schritt 3] Whisper-Transkription (Spracherkennung) gestartet – dies kann mehrere Minuten dauern.",
+        "transcript_whisper_fail": "⚠️ [Schritt 3] Whisper-Transkription fehlgeschlagen",
+        "transcript_whisper_no_result": "⚠️ [Schritt 3] Kein Ergebnis von Whisper",
+        "transcript_whisper_success": "✅ [Schritt 3] Whisper-Transkription erfolgreich",
     },
     "es": {
         "app_title": "Servicio de resumen de transcripciones de YouTube",
@@ -453,5 +513,16 @@ UI_LABELS = {
         "overall_summary_done": "✅ ¡Resumen general completado!",
         "gemini_quota_exceeded": "⚠️ Se ha superado la cuota de la API de Google Generative AI. Inténtelo de nuevo más tarde o revise su cuota.",
         "openai_summary_error": "⚠️ Error durante la generación del resumen de OpenAI",
+        # === Mensajes del proceso de transcripción ===
+        "transcript_apify_try": "⚡ [Paso 1] Intentando transcripción con Apify",
+        "transcript_apify_success": "🟢 [Paso 1] Transcripción de Apify exitosa",
+        "transcript_apify_fail": "⚠️ [Paso 1] Falló Apify, intentando Whisper",
+        "transcript_audio_download_try": "⏬ [Paso 2] Descargando audio",
+        "transcript_audio_download_fail": "⚠️ [Paso 2] Falló la descarga de audio",
+        "transcript_audio_too_large": "⚠️ [Paso 2] Archivo de audio > 25MB",
+        "transcript_whisper_try": "🔊⏳ [Paso 3] Iniciando transcripción Whisper (voz a texto), esto puede tardar varios minutos.",
+        "transcript_whisper_fail": "⚠️ [Paso 3] Falló la transcripción de Whisper",
+        "transcript_whisper_no_result": "⚠️ [Paso 3] Sin resultado de Whisper",
+        "transcript_whisper_success": "✅ [Paso 3] Transcripción de Whisper exitosa",
     },
 }
