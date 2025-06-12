@@ -1,6 +1,6 @@
 services:
   streamlit:
-    build: .
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
     container_name: streamlit-app
     expose:
       - "8501"

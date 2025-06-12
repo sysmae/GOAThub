@@ -63,7 +63,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ubuntu@15.164.146.31 "
             cd ossw_goathub
-            echo "IMAGE_NAME=sechankim/deploy_test" > .env
+            echo "IMAGE_NAME=sechankim/deploy_test" >> .env
             echo "IMAGE_TAG=${{ github.ref_name }}" >> .env
             docker compose down
             docker compose pull
