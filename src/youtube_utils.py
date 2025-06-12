@@ -13,7 +13,7 @@ from typing import Dict, Optional
 from apify_client import ApifyClient
 from dotenv import load_dotenv
 from openai import OpenAI
-from pytubefix import YouTube
+from pytube import YouTube
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import NoTranscriptFound, TranscriptsDisabled
 

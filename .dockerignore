@@ -7,8 +7,8 @@ __pycache__/
 *.ipynb_checkpoints
 
 # 환경파일
-.env
-*.env
+#.env
+#*.env
 
 # 패키징/배포 무관 파일
 .vscode/
