@@ -5,7 +5,7 @@
 
 # 1. 개발 환경
 
-## 개발 환경 설정
+## 1.1. 개발 환경 설정
 
 ### 1. 필수 도구
 
@@ -36,7 +36,7 @@ OPEN_AI_API_KEY=your_openai_api_key_here
 APIFY_API_TOKEN=your_apify_api_token_here
 ```
 
-## 코드 스타일 및 린팅
+## 1.2. 코드 스타일 및 린팅
 
 ### 1. 린트 도구
 
@@ -83,7 +83,7 @@ ruff check . --fix
 
 # 2. Github
 
-## 브랜치 전략
+## 2.1. 브랜치 전략
 
 Main에 직접 Push하는 것을 금지하며, 브랜치 생성 후 PR을 원칙으로 진행합니다.
 
@@ -102,7 +102,7 @@ Main에 직접 Push하는 것을 금지하며, 브랜치 생성 후 PR을 원칙
 - 영문 소문자, 숫자, 하이픈(`-`)만 사용
 - 쉽표는 사용하지 않음
 
-## 협업 프로세스
+## 2.2. 협업 프로세스
 
 ### 1. 작업 시작 전
 
@@ -142,7 +142,7 @@ git push origin feature/new-feature
 
 - 작업이 완성될 경우, `main`으로 Pull Request 생성
 
-## 풀 리퀘스트(Pull Request) 가이드
+## 2.3. 풀 리퀘스트(Pull Request) 가이드
 
 ### 1. PR 생성 조건
 
@@ -211,7 +211,7 @@ PR 생성 시 자동으로 템플릿이 표기됩니다. 템플릿에 맞춰서 
 - 추가 설명, 논의 필요 사항, 참고할 사항 등을 작성하세요.
 ```
 
-## 문제 해결
+## 2.4. 문제 해결
 
 ### 1. 린트 오류 발생 시
 
@@ -233,7 +233,7 @@ git rebase --continue
 ```
 
 
-## GitHub 규칙
+## 2.5. GitHub 규칙
 
 ### 1. 브랜치 보호
 
@@ -249,7 +249,7 @@ git rebase --continue
 - 커밋 메시지 컨벤션 준수
 
 
-## 이슈 등록
+## 2.6. 이슈 등록
 
 다음 항목에 대해 Github에서 이슈를 작성할 수 있습니다:
 - `BUG`: 발견된 버그를 제보합니다.
@@ -286,7 +286,7 @@ git rebase --continue
 해당 프로젝트의 인프라 설정 및 배포와 관련된 상세 문서는 **Notion**에 정리되어 있습니다.  
 > GitHub에는 요약된 `.md` 파일만 포함되어 있으며, 이미지, 표, 스크린샷 등은 Notion 문서에서 확인해주세요.
 
-## 1. `doc/infra` - 인프라 구성 설정
+## 3.1. `doc/infra` - 인프라 구성 설정
 
 - [01. AWS 인스턴스 생성](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/01_aws_instance_create.md)
 - [02. Docker 설치 로그](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/02_docker_install_log.md)
@@ -298,27 +298,27 @@ git rebase --continue
 - [08. HTTPS 인증서 (certbot) 설정](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/08_https_certbot.md)
 - [09. 인증서 갱신 자동화 (cron)](https://github.com/sysmae/GOAThub/blob/main/doc/01_infra/09_https_cron.md)
 
-## 2. `doc/reference` - 팀원용 참조 문서
+## 3.2. `doc/reference` - 팀원용 참조 문서
 - [01. Docker 설치가이드](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/01_Docker_install_guide.md)
 - [02. Docker Concept](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/02_Docker_Concept.md)
 - [03. Docker Instruction](https://github.com/sysmae/GOAThub/blob/main/doc/02_reference/03_Docker_Instruction.md)
 
-## 3. `doc/security` - 보안 정책 및 설정
+## 3.3. `doc/security` - 보안 정책 및 설정
 - [01. EC2 인바운드 보안 그룹 규칙](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/01_ec2_inbound_rule_config.md)
 - [02. GitHub Secrets 및 환경변수 관리](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/02_github_secret_management.md)
 - [03. SSH Key 및 인증서 설정 가이드](https://github.com/sysmae/GOAThub/blob/main/doc/03_security/03_ssh_key_management.md)
 
-## 4. `doc/test` - 서버 동작 및 컨테이너 체크
+## 3.4. `doc/test` - 서버 동작 및 컨테이너 체크
 - [01. 컨테이너 및 서버 동작 테스트](https://github.com/sysmae/GOAThub/blob/main/doc/04_test/01_Docker_container_running_cehck.md)
 
-## 5. `doc/deploy` - 배포 자동화 및 GitHub Actions 구성
+## 3.5. `doc/deploy` - 배포 자동화 및 GitHub Actions 구성
 - [01. GitHub 기반 배포 pipeline 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/01_deploy_with_github.md)
 - [02. DockerHub 기반 배포 pipeline 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/02_deploy_with_dockerhub.md)
 - [03. 태그 기반 배포 + 로그 작성 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/03_tag_triggered_deploy_with_logging.md)
 - [04. deploy.yml 스크립트 설명](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/04_deploy.yml_explained.md)
 - [05. 블루-그린 무중단 배포 구성](https://github.com/sysmae/GOAThub/blob/main/doc/05_deploy/05_blue_green_deployment_with_zero_downtime.md)
 
-## 6. `doc/troubleshooting` - 문제 해결 기록
+## 3.6. `doc/troubleshooting` - 문제 해결 기록
 - [01. Webshare 프록시 직접 설정 시도 (실패)](https://github.com/sysmae/GOAThub/blob/main/doc/06_troubleshooting/01_youtubeapi_trouble_forward_proxy_network_setting.md)  
   → 로컬 PC에 Squid 프록시 서버 구성 후 EC2에서 직접 요청을 보내도록 구성 시도. 네트워크 제한으로 실패.
 
