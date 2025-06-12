@@ -21,11 +21,11 @@ from constant import UI_LABELS
 
 # 환경 변수 설정
 load_dotenv()  # .env 파일에서 환경변수 불러오기
-OPEN_AI_API_KEY = os.getenv("OPEN_AI_API_KEY")  # 변수명 수정
+OPENAI_API_KEY = os.getenv("OPEN_AI_API_KEY")  # 변수명 수정
 APIFY_API_TOKEN = os.getenv("APIFY_API_TOKEN")
 
 # OpenAI 클라이언트 초기화
-openai_client = OpenAI(api_key=OPEN_AI_API_KEY)
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 def extract_video_id(url: str) -> Optional[str]:
