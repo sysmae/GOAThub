@@ -1065,6 +1065,54 @@ Un resumen en formato markdown:
 """
 
 
+def handle_openai_rate_limit_error(e, lang_code="ko"):
+    """
+    OpenAI 429 Rate Limit 에러 메시지를 감지하여 사용자 친화적 메시지로 변환 (다국어 지원)
+    """
+    msg = str(e)
+    if "429" in msg and "rate limit" in msg.lower():
+        # 다국어 메시지
+        messages = {
+            "ko": (
+                "⚠️ OpenAI 요약 API의 사용량 제한(Rate Limit)에 도달했습니다.\n"
+                "잠시 후 다시 시도하거나, OpenAI 계정의 요금제/결제 상태를 확인하세요.\n"
+                "자세한 내용: https://platform.openai.com/account/rate-limits"
+            ),
+            "en": (
+                "⚠️ OpenAI summary API rate limit reached.\n"
+                "Please try again later or check your OpenAI account's billing/rate limit status.\n"
+                "See: https://platform.openai.com/account/rate-limits"
+            ),
+            "ja": (
+                "⚠️ OpenAI要約APIの利用制限(Rate Limit)に達しました。\n"
+                "しばらくしてから再試行するか、OpenAIアカウントの課金・制限状況を確認してください。\n"
+                "詳細: https://platform.openai.com/account/rate-limits"
+            ),
+            "zh": (
+                "⚠️ 已达到OpenAI摘要API的使用限制(Rate Limit)。\n"
+                "请稍后重试，或检查OpenAI账户的计费/配额状态。\n"
+                "详情: https://platform.openai.com/account/rate-limits"
+            ),
+            "fr": (
+                "⚠️ Limite d'utilisation de l'API de résumé OpenAI atteinte (Rate Limit).\n"
+                "Veuillez réessayer plus tard ou vérifier l'état de facturation/limite de votre compte OpenAI.\n"
+                "Voir : https://platform.openai.com/account/rate-limits"
+            ),
+            "de": (
+                "⚠️ OpenAI-Zusammenfassungs-API-Nutzungsgrenze (Rate Limit) erreicht.\n"
+                "Bitte versuchen Sie es später erneut oder prüfen Sie den Abrechnungs-/Limitstatus Ihres OpenAI-Kontos.\n"
+                "Details: https://platform.openai.com/account/rate-limits"
+            ),
+            "es": (
+                "⚠️ Se alcanzó el límite de uso (Rate Limit) de la API de resumen de OpenAI.\n"
+                "Inténtelo de nuevo más tarde o revise el estado de facturación/límite de su cuenta de OpenAI.\n"
+                "Más información: https://platform.openai.com/account/rate-limits"
+            ),
+        }
+        return messages.get(lang_code, messages["en"])
+    return None
+
+
 def summarize_sectionwise(
     text: str,
     model: str,
@@ -1091,7 +1139,12 @@ def summarize_sectionwise(
                     verbose=False,
                 ).run(docs)
             except Exception as e:
-                summary = f"{LABELS['summary_error']}: {e}"
+                # 429 Rate Limit 에러 감지 및 안내 메시지
+                rate_limit_msg = handle_openai_rate_limit_error(e, lang_code)
+                if rate_limit_msg:
+                    summary = rate_limit_msg
+                else:
+                    summary = f"{LABELS['summary_error']}: {e}"
             intermediate_summaries.append(summary)
 
     if "gemini" in model:
@@ -1141,7 +1194,12 @@ def summarize_sectionwise(
                 verbose=False,
             ).run(docs)
         except Exception as e:
-            overall_summary = f"{LABELS['overall_summary_error']}: {e}"
+            # 429 Rate Limit 에러 감지 및 안내 메시지
+            rate_limit_msg = handle_openai_rate_limit_error(e, lang_code)
+            if rate_limit_msg:
+                overall_summary = rate_limit_msg
+            else:
+                overall_summary = f"{LABELS['overall_summary_error']}: {e}"
     else:
         return LABELS["unsupported_model"]
 
@@ -1233,7 +1291,13 @@ def summarize(
             verbose=False,
         )
         docs = [Document(page_content=text)]
-        return chain.run(docs)
-
+        try:
+            return chain.run(docs)
+        except Exception as e:
+            # 429 Rate Limit 에러 감지 및 안내 메시지
+            rate_limit_msg = handle_openai_rate_limit_error(e, lang_code)
+            if rate_limit_msg:
+                return rate_limit_msg
+            return f"{LABELS['summary_error']}: {e}"
     else:
         return LABELS["unsupported_model"]
