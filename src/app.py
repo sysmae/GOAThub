@@ -142,6 +142,11 @@ def load_video(url):
                     "summarized": False,
                     "notion_saved": False,
                     "video_title": video_title,
+                    # 추가: 섹션별 요약, 섹션별 저장, 채팅 등도 초기화
+                    "sectionwise_summary": "",
+                    "sectionwise_summarize_clicked": False,
+                    "sectionwise_notion_saved": False,
+                    "chat_history": [],
                 }
             )
         else:
