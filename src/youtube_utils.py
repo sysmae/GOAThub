@@ -21,7 +21,7 @@ from constant import UI_LABELS
 
 # 환경 변수 설정
 load_dotenv()  # .env 파일에서 환경변수 불러오기
-OPENAI_API_KEY = os.getenv("OPEN_AI_API_KEY")  # 변수명 수정
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # 변수명 수정
 APIFY_API_TOKEN = os.getenv("APIFY_API_TOKEN")
 
 # OpenAI 클라이언트 초기화
