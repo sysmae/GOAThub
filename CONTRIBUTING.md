@@ -3,7 +3,9 @@
 본 문서는 프로젝트에 기여하기 위한 가이드라인을 설명합니다.  
 코드 스타일, 협업 프로세스, 기술적 요구사항 등을 반드시 준수해 주세요.
 
-## 개발 환경 설정
+# 1. 개발 환경
+
+## 1.1. 개발 환경 설정
 
 ### 1. 필수 도구
 
@@ -34,7 +36,7 @@ OPEN_AI_API_KEY=your_openai_api_key_here
 APIFY_API_TOKEN=your_apify_api_token_here
 ```
 
-## 코드 스타일 및 린팅
+## 1.2. 코드 스타일 및 린팅
 
 ### 1. 린트 도구
 
@@ -79,7 +81,11 @@ ruff check .
 ruff check . --fix
 ```
 
-## 브랜치 전략
+# 2. Github
+
+## 2.1. 브랜치 전략
+
+Main에 직접 Push하는 것을 금지하며, 브랜치 생성 후 PR을 원칙으로 진행합니다.
 
 ### 1. 네이밍 규칙
 
@@ -97,7 +103,7 @@ ruff check . --fix
 - 영문 소문자, 숫자, 하이픈(`-`)만 사용
 - 쉽표는 사용하지 않음
 
-## 협업 프로세스
+## 2.2. 협업 프로세스
 
 ### 1. 작업 시작 전
 
@@ -133,9 +139,17 @@ git checkout -b feature/new-feature
 git push origin feature/new-feature
 ```
 
-## 풀 리퀘스트(Pull Request) 가이드
+### 5. Pull Request 생성
+
+- 작업이 완성될 경우, `main`으로 Pull Request 생성
+
+## 2.3. 풀 리퀘스트(Pull Request) 가이드
 
 ### 1. PR 생성 조건
+
+> ⚠️ **Warning**:
+>
+> 커밋 단위가 아닌 기능 개발 완성을 단위로 PR을 생성해야 합니다.
 
 - 반드시 `main` 브랜치 대상
 - 최소 1명 이상의 리뷰 승인 필요
@@ -152,22 +166,53 @@ git branch -d feature/new-feature
 git push origin --delete feature/new-feature
 ```
 
-## GitHub 규칙
+### 3. PR 템플릿
 
-### 1. 브랜치 보호
+PR 생성 시 자동으로 템플릿이 표기됩니다. 템플릿에 맞춰서 작성해주세요.
 
-- `main` 브랜치 직접 푸시 금지
-- PR 승인 필수 (최소 1명)
-- Status Checks 통과 필수
-  - `Python Lint`
-  - `Branch Naming`
+> ⚠️ **Warning**:
+>
+> `개요 (Summary)`는 필수적으로 작성해야하며, 이외의 사항들은 선택사항입니다.
 
-### 2. 커밋 정책
+```markdown
+## 📌 개요 (Summary)
 
-- 서명된 커밋(Signed commits) 권장
-- 커밋 메시지 컨벤션 준수
+이 PR에서 어떤 작업을 했는지 간단히 설명해 주세요.
 
-## 문제 해결
+## 🔍 변경 사항 (Changes)
+
+- [ ] feat:
+  - `feat` ... (may be commit message)
+  - ...
+- [ ] fix:
+  - - `fix` ... (may be commit message)
+  - ...
+- [ ] refactor:
+  - `refactor` ... (may be commit message)
+  - ...
+- [ ] doc:
+  - `doc` ... (may be commit message)
+  - ...
+- [ ] test:
+  - `test` ... (may be commit message)
+  - ...
+
+## 🧪 테스트 결과 (Test Results)
+
+- [ ] 로컬 테스트 완료
+- [ ] Lint 통과 (`ruff check`)
+
+## 📎 관련 이슈 (Related Issue)
+
+- 이슈 번호: `#123`
+- 참고 링크: [관련 문서/이슈 링크]
+
+## 🙋 기타 공유사항
+
+- 추가 설명, 논의 필요 사항, 참고할 사항 등을 작성하세요.
+```
+
+## 2.4. 문제 해결
 
 ### 1. 린트 오류 발생 시
 
@@ -187,6 +232,54 @@ git rebase origin/main
 # 충돌 해결 후
 git rebase --continue
 ```
+
+
+## 2.5. GitHub 규칙
+
+### 1. 브랜치 보호
+
+- `main` 브랜치 직접 푸시 금지
+- PR 승인 필수 (최소 1명)
+- Status Checks 통과 필수
+  - `Python Lint`
+  - `Branch Naming`
+
+### 2. 커밋 정책
+
+- 서명된 커밋(Signed commits) 권장
+- 커밋 메시지 컨벤션 준수
+
+
+## 2.6. 이슈 등록
+
+다음 항목에 대해 Github에서 이슈를 작성할 수 있습니다:
+- `BUG`: 발견된 버그를 제보합니다.
+    - 버그 설명
+    - 재현 방법
+    - 예상 결과
+    - 실제 결과
+    - 환경 정보
+    - 참고 자료
+- `DISCUSSION`: 의논을 위한 이슈를 등록합니다. (외부인 협업용)
+    - 논의 주제
+    - 배경 및 맥락
+    - 선택지 또는 아이디어
+    - 논의하고 싶은 부분
+- `FEATURE`: 기능 구현을 제안합니다. (외부인 협업용)
+    - 기능 설명
+    - 동기 또는 문제
+    - 예상 구현 방식
+    - 참고 자료
+- `QUESTION`: 프로젝트와 관련된 질문을 등록합니다. (외부인 협업용)
+    - 질문 내용
+    - 관련 문서/코드
+    - 기대 답변
+- `TEST-REQUEST`: 필요한 테스트 경계조건을 등록합니다.
+    - 테스트 대상
+    - 테스트 아이디어(경계조건)
+    - 참고 사항
+
+> ✅ **참고**: Github에서 이슈 등록시 템플릿을 시각적으로 선택할 수 있으며, 자동으로 템플릿을 가져옵니다.
 
 # Appendix: 주요 설정 파일
 
