@@ -1,6 +1,6 @@
 # 🔐 API 키 발급 가이드 - GOATube
 
-GOATube 서비스를 실행하려면 다음 3종류의 API 키가 필요합니다:
+GOATube 서비스를 실행하려면 다음 API 키가 필요합니다:
 
 - **Google Generative AI (Gemini) API 키**
 - **OpenAI API 키**
@@ -35,7 +35,7 @@ GOOGLE_API_KEY=your_google_api_key_here
 
 ### 🔍 용도
 
-Gemini 대신 OpenAI의 GPT 모델을 사용할 때 필요합니다.
+Gemini 대신 OpenAI의 GPT 모델을 사용할 때 필요합니다. 또한 대본이 없는 영상의 경우, OpenAI의 Whisper 모델을 사용하여 대본을 생성합니다.
 
 ### 🛠 발급 방법
 
@@ -54,7 +54,7 @@ OPEN_AI_API_KEY=your_openai_api_key_here
 
 ### 🔍 용도
 
-Apify 크롤러를 통해 유튜브 영상 정보 등 외부 데이터를 수집할 때 사용합니다.
+Apify 크롤러를 통해 유튜브 대본을 수집할 때 사용합니다.
 기존 유튜브 대본 크롤링 방식이 유튜브의 정책 변경으로 인해 높은 실패율을 보이므로, Apify를 통해 안정적으로 대본을 추출합니다.
 
 ### 🛠 발급 방법

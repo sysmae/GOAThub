@@ -1,8 +1,8 @@
 # 프로젝트 개요
 
-**팀명:** GOATHub  
+**팀명:** GOATHub
 
-**프로젝트 제목:** GOATube  
+**프로젝트 제목:** GOATube
 
 **Github:** https://github.com/sysmae/GOAThub
 
@@ -25,7 +25,6 @@
 - **데이터 저장:** Notion API 연동 (결과 저장)
 - **배포:** Streamlit Cloud -> AWS EC2 (Docker)
 - **협업 도구:** GitHub, Notion, Perplexity Space
-
 
 ## 주요 기능 (MVP 목표)
 
@@ -108,7 +107,6 @@ docker run -p 8501:8501 --env-file src/.env goathub-app
 
 ![Notion 설정 입력](./docs/attachment/readme_notion-config-input.png)
 
-
 ## 요약
 
 ### 대본 추출
@@ -137,7 +135,6 @@ docker run -p 8501:8501 --env-file src/.env goathub-app
 
 ![AI 채팅](./docs/attachment/readme_youtube-chatai-output.png)
 
-
 ## 요약 설정
 
 ### 요약 AI 선택
@@ -156,10 +153,10 @@ docker run -p 8501:8501 --env-file src/.env goathub-app
 
 ### 요약 길이 제한
 
-`요약 길이 제한` 항목을 체크할 경우 요약 길이를 수정할 수 있는 옵션이 나타납니다. 문자수 200 이상의 값으로 설정할 수 있습니다.
+`요약 길이 제한` 항목을 체크할 경우 요약 길이를 수정할 수 있는 옵션이 나타납니다. 문자수 200~3000의 값으로 설정할 수 있습니다.
+또한 200~500자 사이의 경우 짧은 요약, 500~1500자 사이의 경우 중간 요약, 1500자 이상의 경우 긴 요약으로 분류되어 다른 프롬프트가 적용됩니다.
 
 ![요약 길이 제한](./docs/attachment/readme_summary-length.png)
-
 
 ## 추가 작업
 
@@ -204,7 +201,6 @@ git push origin feature/기능명
 5. **PR 생성:**  
    GitHub에서 `main` 대상 PR 생성 후, 리뷰 및 승인받기  
    (자동 린트 검사, 테스트 통과 필수)
-
 
 ## 기여 방법
 
